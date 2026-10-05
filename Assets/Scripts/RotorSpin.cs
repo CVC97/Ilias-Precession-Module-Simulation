@@ -1,20 +1,17 @@
-using System;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 public class RotorSpin : MonoBehaviour {
     // slider from 0 to 3000 rpm
     [Tooltip("Rotor spin rate in revolutions per minute")]
     [SerializeField, Range(0f, 3000f)] private float rpm = 10f;
-    [SerializeField] private float logTimer;
 
     private float spinAngle;                                    // degrees (Unity uses degrees), about the local Y axis
+    private float logTimer;                                     // timer variable for debugging
 
 
     // Update is called once per frame
     void Update() {
-        float degPerSecond = rpm * 360 / 60;                    // one rpm converts to 360 degrees in 60s  
-        // TO DO: Verlet instead of Euler !!!
+        float degPerSecond = rpm * 360f / 60;                   // one rpm converts to 360 degrees in 60s  
         spinAngle += degPerSecond * Time.deltaTime;             // Euler integrator 
         spinAngle = Mathf.Repeat(spinAngle, 360f);              // forces spinAngle to be between 0 and 360 degrees
 

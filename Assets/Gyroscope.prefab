@@ -451,4 +451,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1699e769922bcb6c2a36a0d839c7e059, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RotorSpin
-  rpm: 10
+  rpm: 20
