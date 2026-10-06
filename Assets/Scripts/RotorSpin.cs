@@ -5,15 +5,16 @@ public class RotorSpin : MonoBehaviour {
     [Tooltip("Rotor spin rate in revolutions per minute")]
     [SerializeField, Range(0f, 3000f)] private float rpm = 10f;
 
-    private float spinAngle;                                    // degrees (Unity uses degrees), about the local Y axis
-    private float logTimer;                                     // timer variable for debugging
+    private float spinAngle;                                            // degrees (Unity uses degrees), about the local Y axis
+    private float logTimer;                                             // timer variable for debugging
+    public float Rpm => rpm;                                            // read-only property
 
 
     // Update is called once per frame
     void Update() {
-        float degPerSecond = rpm * 360f / 60;                   // one rpm converts to 360 degrees in 60s  
-        spinAngle += degPerSecond * Time.deltaTime;             // Euler integrator 
-        spinAngle = Mathf.Repeat(spinAngle, 360f);              // forces spinAngle to be between 0 and 360 degrees
+        float degPerSecond = rpm * 360f / 60;                           // one rpm converts to 360 degrees in 60s  
+        spinAngle += degPerSecond * Time.deltaTime;                     // Euler integrator 
+        spinAngle = Mathf.Repeat(spinAngle, 360f);                      // forces spinAngle to be between 0 and 360 degrees
 
         transform.localRotation = Quaternion.AngleAxis(spinAngle, Vector3.up); 
 
