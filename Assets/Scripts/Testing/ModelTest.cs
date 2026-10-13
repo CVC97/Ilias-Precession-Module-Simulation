@@ -1,7 +1,6 @@
 using UnityEngine;
 
 
-
 public class ModelTest : MonoBehaviour {
     public enum Integrator { Euler, RK4 }                                   // shows up as a dropdown in the Inspector
 

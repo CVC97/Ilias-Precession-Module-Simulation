@@ -1,7 +1,6 @@
 using System;
 
 
-
 public struct TopState {
     public double Theta;                                    // rad
     public double Phi;                                      // rad

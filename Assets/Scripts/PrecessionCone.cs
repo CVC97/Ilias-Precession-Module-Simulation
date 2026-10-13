@@ -1,5 +1,6 @@
 using UnityEngine;
 
+
 public class PrecessionCone : MonoBehaviour {
     [SerializeField] private RotorSpin rotor;                                   // reference to another component
     [SerializeField, Range(0f, 90f)] private float tiltDeg = 60f;               // θ, angle between axle and vertical
