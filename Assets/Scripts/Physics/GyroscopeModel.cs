@@ -1,11 +1,29 @@
 using System;
 
 
+
 public struct TopState {
     public double Theta;                                    // rad
     public double Phi;                                      // rad
     public double Psi;                                      // rad
     public double ThetaDot;                                 // rad/s
+
+    // operator overloading
+    public static TopState operator +(TopState a, TopState b) =>
+        new TopState {
+            Theta = a.Theta + b.Theta,
+            Phi = a.Phi + b.Phi,
+            Psi = a.Psi + b.Psi,
+            ThetaDot = a.ThetaDot + b.ThetaDot,
+        };
+
+    public static TopState operator *(TopState a, double t) =>
+        new TopState {
+            Theta = a.Theta * t,
+            Phi = a.Phi * t,
+            Psi = a.Psi * t,
+            ThetaDot = a.ThetaDot * t,
+        };
 }
 
 
@@ -20,7 +38,10 @@ public class GyroscopeModel {
     public double Theta  => state.Theta;
     public double Phi  => state.Phi;
     public double Psi  => state.Psi;
-    // public double Energy => 1;
+    public double ThetaDot  => state.ThetaDot;
+    public double PhiDot  => CalcPhiDot(state);
+    public double PsiDot  => CalcPsiDot(state);
+    public double Energy => CalcEnergy(state);
 
 
     // constructor class
@@ -34,11 +55,15 @@ public class GyroscopeModel {
 
 
     private double NPow(double x, int n) {
-        double prod = x;
-        for (int i = 1; i < n; i++) {
-            prod *= x;
+        if (n == 0) {
+            return 1;
+        } else {
+            double prod = x;
+            for (int i = 1; i < n; i++) {
+                prod *= x;
+            }
+            return prod;
         }
-        return prod;
     }
 
 
@@ -72,6 +97,19 @@ public class GyroscopeModel {
         return thetaDotDot;
     }
 
+    // helper function for the energy of the system state y 
+    private double CalcEnergy(in TopState y) {
+        // state of the system
+        double theta = y.Theta;
+        double thetaDot = y.ThetaDot;
+        double phiDot = CalcPhiDot(y);
+        double psiDot = CalcPsiDot(y);
+        // calculate energy
+        double e_kin = (i1*(NPow(phiDot*Math.Sin(theta), 2) + NPow(thetaDot, 2)) + i3*NPow(phiDot*Math.Cos(theta) + psiDot, 2)) / 2;
+        double e_pot = m*g*l*Math.Cos(theta);
+        return e_kin + e_pot;
+    }
+
 
     // initial conditions
     public void SetInitialConditions(double theta0, double thetaDot0, double phiDot0, double omega3) {
@@ -103,19 +141,14 @@ public class GyroscopeModel {
 
 
     // euler integrator: integrates TopState y
-    public void EulerStep(double dt, TopState state) {
+    public void EulerStep(double dt) {
         Derivatives(state, out TopState f);
-
-        // updating the state component by component
-        state.Theta += f.Theta * dt;
-        state.Phi += f.Phi * dt;
-        state.Psi += f.Psi * dt;
-        state.ThetaDot += f.ThetaDot * dt;
+        state += f * dt;
     }
 
 
     // // verlet integrator: integrates TopState y
-    // public void VerletStep(double dt, TopState y) {
+    // public void VerletStep(double dt) {
     //     Derivatives(state, out TopState a1);
 
     //     // updating the angles with a1
@@ -128,47 +161,23 @@ public class GyroscopeModel {
 
 
     // rk4 integrator: integrates TopState y
-    public void RK4Step(double dt, TopState state) {
+    public void RK4Step(double dt) {
         TopState support;
         // calculation k1 = f(t, y) * dt and support = y + k1/2
         Derivatives(state, out TopState k1);
-        k1.Theta *= dt;
-        k1.Phi *= dt;
-        k1.Psi *= dt;
-        k1.ThetaDot *= dt;
-        support.Theta = state.Theta + k1.Theta/2;
-        support.Phi = state.Phi + k1.Phi/2;
-        support.Psi = state.Psi + k1.Psi/2;
-        support.ThetaDot = state.ThetaDot + k1.ThetaDot/2;
+        k1 *= dt;
+        support = state + k1 * 0.5;
         // calculation k2 = f(t+dt/2, y+k1/2) * dt and support = y + k2/2
         Derivatives(support, out TopState k2);
-        k2.Theta *= dt;
-        k2.Phi *= dt;
-        k2.Psi *= dt;
-        k2.ThetaDot *= dt;
-        support.Theta = state.Theta + k2.Theta/2;
-        support.Phi = state.Phi + k2.Phi/2;
-        support.Psi = state.Psi + k2.Psi/2;
-        support.ThetaDot = state.ThetaDot + k2.ThetaDot/2;
+        k2 *= dt;
+        support= state + k2 * 0.5;
         // calculation k3 = f(t+dt/2, y+k2/2) * dt and support = y + k3
         Derivatives(support, out TopState k3);
-        k3.Theta *= dt;
-        k3.Phi *= dt;
-        k3.Psi *= dt;
-        k3.ThetaDot *= dt;
-        support.Theta = state.Theta + k3.Theta;
-        support.Phi = state.Phi + k3.Phi;
-        support.Psi = state.Psi + k3.Psi;
-        support.ThetaDot = state.ThetaDot + k3.ThetaDot;
+        k3 *= dt;
+        support = state + k3;
         // calculation k4 = f(t+dt, y+k2) * dt and y_(i+1)
         Derivatives(support, out TopState k4);
-        k3.Theta *= dt;
-        k3.Phi *= dt;
-        k3.Psi *= dt;
-        k3.ThetaDot *= dt;
-        state.Theta += (k1.Theta + 2*k2.Theta + 2*k3.Theta + k4.Theta) / 6;
-        state.Phi += (k1.Phi + 2*k2.Phi + 2*k3.Phi + k4.Phi) / 6;
-        state.Psi += (k1.Psi + 2*k2.Psi + 2*k3.Psi + k4.Psi) / 6;
-        state.ThetaDot += (k1.ThetaDot + 2*k2.ThetaDot + 2*k3.ThetaDot + k4.ThetaDot) / 6; 
+        k4 *= dt;
+        state += (k1 + k2*2 + k3*2 + k4) * (1.0/6); 
     }
 }
