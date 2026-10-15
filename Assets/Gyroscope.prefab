@@ -563,7 +563,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PrecessionCone
   rotor: {fileID: 9215607261665433923}
-  tiltDeg: 60
+  tiltDeg: 22.6
 --- !u!114 &183633406879777955
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -580,10 +580,10 @@ MonoBehaviour:
   leverArm: 0.05
   radius: 0.03
   rpm: 3000
-  theta0Deg: 60
+  theta0Deg: 52.5
   phiDot0: 0
   integrator: 1
-  substeps: 1
+  substeps: 1000
   rotor: {fileID: 6432785403768852930}
 --- !u!1 &8253276318964061029
 GameObject:

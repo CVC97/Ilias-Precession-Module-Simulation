@@ -34,13 +34,32 @@ public class GyroscopeModel {
 
 
     // read-only properties
-    public double Theta  => state.Theta;
-    public double Phi  => state.Phi;
-    public double Psi  => state.Psi;
-    public double ThetaDot  => state.ThetaDot;
-    public double PhiDot  => CalcPhiDot(state);
-    public double PsiDot  => CalcPsiDot(state);
+    public double Theta => state.Theta;
+    public double Phi => state.Phi;
+    public double Psi => state.Psi;
+    public double ThetaDot => state.ThetaDot;
+    public double PhiDot => CalcPhiDot(state);
+    public double PsiDot => CalcPsiDot(state);
+    public double Omega3 => pPsi / i3;
     public double Energy => CalcEnergy(state);
+
+
+    // vector properties
+
+    public Vec3d AxisDirection => new Vec3d {
+        X = Math.Sin(Phi) * Math.Sin(Theta),
+        Y = -Math.Cos(Phi) * Math.Sin(Theta),
+        Z = Math.Cos(Theta),
+    };
+    public Vec3d LineOfNodes => new Vec3d {
+        X = Math.Cos(Phi),
+        Y = Math.Sin(Phi),
+        Z = 0,
+    };
+
+    public Vec3d AngularVelocity => Vec3d.UnitZ*PhiDot + LineOfNodes*ThetaDot + AxisDirection*PsiDot;
+    public Vec3d AngularMomentum => AxisDirection*i3*Omega3 + (AngularVelocity-AxisDirection*Omega3)*i1;
+    public Vec3d Torque => Vec3d.Cross(AxisDirection, Vec3d.UnitZ) * (-1)*m*g*l ;
 
 
     // constructor class
@@ -81,7 +100,7 @@ public class GyroscopeModel {
         double cosTheta = Math.Cos(theta);
 
         double phiDot = CalcPhiDot(y);
-        double psiDot = pPsi/i3 - phiDot*cosTheta;
+        double psiDot = Omega3 - phiDot*cosTheta;
         return psiDot;
     }
 
@@ -92,7 +111,7 @@ public class GyroscopeModel {
 
         double phiDot = CalcPhiDot(y);
         double psiDot = CalcPsiDot(y);
-        double thetaDotDot = (1-i3/i1)*NPow(phiDot, 2)*sinTheta*cosTheta - i3/i1*phiDot*psiDot*sinTheta + m*g*l*sinTheta/i1;
+        double thetaDotDot = NPow(phiDot, 2)*sinTheta*cosTheta - i3/i1*Omega3*phiDot*sinTheta + m*g*l*sinTheta/i1;
         return thetaDotDot;
     }
 
@@ -104,7 +123,7 @@ public class GyroscopeModel {
         double phiDot = CalcPhiDot(y);
         double psiDot = CalcPsiDot(y);
         // calculate energy
-        double e_kin = (i1*(NPow(phiDot*Math.Sin(theta), 2) + NPow(thetaDot, 2)) + i3*NPow(phiDot*Math.Cos(theta) + psiDot, 2)) / 2;
+        double e_kin = (i1*(NPow(phiDot*Math.Sin(theta), 2) + NPow(thetaDot, 2)) + i3*NPow(Omega3, 2)) / 2;
         double e_pot = m*g*l*Math.Cos(theta);
         return e_kin + e_pot;
     }
