@@ -78,16 +78,16 @@ public class GyroscopeController : MonoBehaviour {
 
     void Update() {
         // model angles (rad, right-handed) → Unity degrees (left-handed: sign flip)
-        float thetaDeg = (float)(gyroscope.Theta * Mathf.Rad2Deg);
-        float phiDeg = (float)(gyroscope.Phi * Mathf.Rad2Deg % 360.0);
-        float psiDeg = (float)(gyroscope.Psi * Mathf.Rad2Deg % 360.0);
+        float thetaDeg = PhysicsToUnity.Angle(gyroscope.Theta);
+        float phiDeg = PhysicsToUnity.Angle(gyroscope.Phi);
+        float psiDeg = PhysicsToUnity.Angle(gyroscope.Psi);
 
         // rotor
-        rotor.localRotation = Quaternion.AngleAxis(psiDeg, -Vector3.up);        // around the vertical axis
+        rotor.localRotation = Quaternion.AngleAxis(psiDeg, Vector3.up);         // around the vertical axis
 
         // gyroscope
-        Quaternion tilt = Quaternion.AngleAxis(thetaDeg, -Vector3.right);        // around the x axis
-        Quaternion precession = Quaternion.AngleAxis(phiDeg, -Vector3.up);      // around the vertical axis
+        Quaternion tilt = Quaternion.AngleAxis(thetaDeg, Vector3.right);        // around the x axis
+        Quaternion precession = Quaternion.AngleAxis(phiDeg, Vector3.up);       // around the vertical axis
         transform.localRotation = precession * tilt;
     }
 }

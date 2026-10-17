@@ -560,6 +560,7 @@ GameObject:
   - component: {fileID: 8544362435319980091}
   - component: {fileID: 4571750419975173699}
   - component: {fileID: 183633406879777955}
+  - component: {fileID: 121853131369797273}
   m_Layer: 0
   m_Name: Gyroscope
   m_TagString: Untagged
@@ -620,6 +621,27 @@ MonoBehaviour:
   integrator: 1
   substeps: 1000
   rotor: {fileID: 6432785403768852930}
+--- !u!114 &121853131369797273
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7842758996533521009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83b227b7922f4ba379ad1e116fcfb3ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorDisplay
+  arrowL: {fileID: 335528364919278346}
+  arrowOmega: {fileID: 832625634523795265}
+  arrowD: {fileID: 2204130038143235176}
+  showL: 1
+  showOmega: 1
+  showD: 1
+  scaleL: 11
+  scaleOmega: 0.0004
+  scaleD: 1.9
 --- !u!1 &8253276318964061029
 GameObject:
   m_ObjectHideFlags: 0
@@ -724,6 +746,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+--- !u!114 &335528364919278346 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2602244018857947861, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+  m_PrefabInstance: {fileID: 2356805789537892831}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!4 &366096009133614224 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2711637573161557327, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
@@ -781,6 +814,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ArrowOmega
       objectReference: {fileID: 0}
+    - target: {fileID: 8250819014698215639, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5d970f3cf9ef9e603bab0fb1259615fa, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -791,6 +828,17 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2711637573161557327, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
   m_PrefabInstance: {fileID: 3428105455409659284}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &832625634523795265 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2602244018857947861, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+  m_PrefabInstance: {fileID: 3428105455409659284}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!1001 &4218645463557080765
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -843,11 +891,26 @@ PrefabInstance:
       propertyPath: m_Name
       value: ArrowD
       objectReference: {fileID: 0}
+    - target: {fileID: 8250819014698215639, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f87422c22c036f95c968d7c427d6eef9, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+--- !u!114 &2204130038143235176 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2602244018857947861, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+  m_PrefabInstance: {fileID: 4218645463557080765}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!4 &2245624626263071730 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2711637573161557327, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}

@@ -119,6 +119,17 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!114 &284561290 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2204130038143235176, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+  m_PrefabInstance: {fileID: 2191256755741678110}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!1 &306752810
 GameObject:
   m_ObjectHideFlags: 0
@@ -435,6 +446,17 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!114 &635200603 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 335528364919278346, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+  m_PrefabInstance: {fileID: 2191256755741678110}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -484,6 +506,17 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1215615518 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 832625634523795265, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+  m_PrefabInstance: {fileID: 2191256755741678110}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!1001 &2191256755741678110
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -492,6 +525,30 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 121853131369797273, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+      propertyPath: arrowD
+      value: 
+      objectReference: {fileID: 284561290}
+    - target: {fileID: 121853131369797273, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+      propertyPath: arrowL
+      value: 
+      objectReference: {fileID: 635200603}
+    - target: {fileID: 121853131369797273, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+      propertyPath: scaleD
+      value: 1.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 121853131369797273, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+      propertyPath: scaleL
+      value: 11
+      objectReference: {fileID: 0}
+    - target: {fileID: 121853131369797273, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+      propertyPath: arrowOmega
+      value: 
+      objectReference: {fileID: 1215615518}
+    - target: {fileID: 121853131369797273, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+      propertyPath: scaleOmega
+      value: 0.0004
+      objectReference: {fileID: 0}
     - target: {fileID: 2288011763199589927, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
