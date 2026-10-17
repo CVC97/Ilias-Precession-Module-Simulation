@@ -32,7 +32,6 @@ public class GyroscopeModel {
     private double pPhi, pPsi;                              // conserved momenta, from the initial conditions
     private TopState state;
 
-
     // read-only properties
     public double Theta => state.Theta;
     public double Phi => state.Phi;

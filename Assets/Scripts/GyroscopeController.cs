@@ -20,6 +20,8 @@ public class GyroscopeController : MonoBehaviour {
 
     [SerializeField] private Transform rotor;
     private GyroscopeModel gyroscope;
+    // make the model public
+    public GyroscopeModel Model => gyroscope;
     private double e0, simTime, logTimer;
     private readonly double gravity = 9.81;
 
