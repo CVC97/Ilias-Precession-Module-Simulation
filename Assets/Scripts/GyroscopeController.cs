@@ -26,7 +26,29 @@ public class GyroscopeController : MonoBehaviour {
     private readonly double gravity = 9.81;
 
 
-    void ResetSimulation() {
+    // getter, so the UI can read the initial value
+    public float Rpm => rpm;
+    public float Theta0Deg => theta0Deg;
+    public float PhiDot0 => phiDot0;                                                    
+
+    // methods for the UI to restart simulation upon parameter changes
+    public void SetRpm(float value) {
+        rpm = value;
+        ResetSimulation();
+    }
+
+    public void SetTheta0Deg(float value) {
+        theta0Deg = value;
+        ResetSimulation();
+    }
+
+    public void SetPhiDot0(float value) {
+        phiDot0 = value;
+        ResetSimulation();
+    }
+
+
+    public void ResetSimulation() {
         gyroscope = new GyroscopeModel(mass, leverArm , radius, gravity);
 
         double omega3 = rpm * 2*Mathf.PI / 60f;                                 // figure axis rotaion in rad/s from slider rpm

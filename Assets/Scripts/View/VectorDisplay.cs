@@ -1,7 +1,6 @@
 using UnityEngine;
 
 
-
 [RequireComponent(typeof(GyroscopeController))]
 public class VectorDisplay : MonoBehaviour {
     [Header("Arrows")]
