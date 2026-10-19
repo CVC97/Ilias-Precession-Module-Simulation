@@ -12,6 +12,9 @@ public class VectorDisplay : MonoBehaviour {
     [SerializeField] private bool showL = true;
     [SerializeField] private bool showOmega = true;
     [SerializeField] private bool showD = true;
+    public bool ShowL {get => showL; set => showL = value;}
+    public bool ShowOmega {get => showOmega; set => showOmega = value;}
+    public bool ShowD {get => showD; set => showD = value;}
 
     [Header("Scale (metres of arrow per physical unit)")]
     [SerializeField] private float scaleL = 11f;                            // m per kg·m²/s

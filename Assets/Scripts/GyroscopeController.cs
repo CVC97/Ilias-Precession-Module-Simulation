@@ -31,6 +31,7 @@ public class GyroscopeController : MonoBehaviour {
     public float Theta0Deg => theta0Deg;
     public float PhiDot0 => phiDot0;                                                    
 
+
     // methods for the UI to restart simulation upon parameter changes
     public void SetRpm(float value) {
         rpm = value;

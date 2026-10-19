@@ -6,26 +6,16 @@ using TMPro;                                                        // TextMeshP
 
 public class ControlPanel : MonoBehaviour {
     [SerializeField] private GyroscopeController controller;
-    [SerializeField] private Slider rpmSlider;
-    [SerializeField] private TextMeshProUGUI rpmValue;
+    [SerializeField] private SliderRow rpmRow;
+    [SerializeField] private SliderRow theta0Row;
+    [SerializeField] private SliderRow phiDot0Row;
+    [SerializeField] private SliderRow timeScaleRow;
+
 
     void Start() {
-        // range and initial value of the slider
-        rpmSlider.minValue = 0f;
-        rpmSlider.maxValue = 3000f;
-        rpmSlider.value = controller.Rpm;
-
-        // register the callback
-        rpmSlider.onValueChanged.AddListener(OnRpmChanged);
-
-        // show the initial value
-        rpmValue.text = $"{rpmSlider.value:F0} rpm";
-    }
-
-
-    // pass the value to the controller, update the text (e.g. $"{value:F0} rpm")
-    private void OnRpmChanged(float value) {
-        controller.SetRpm(value);
-        rpmValue.text = $"{value:F0} rpm";
+        rpmRow.Setup("Drehzahl", 0f, 3000f, controller.Rpm, "rpm", "F0", controller.SetRpm);
+        theta0Row.Setup("Neigung", 1, 89, controller.Theta0Deg, "deg", "F0", controller.SetTheta0Deg);
+        phiDot0Row.Setup("Präzession", -10, 10, controller.PhiDot0, "°", "F2", controller.SetPhiDot0);
+        timeScaleRow.Setup("Zeitlupe", 0.05f, 1f, Time.timeScale, "×", "F2", v => Time.timeScale = v);
     }
 }
