@@ -303,6 +303,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -350,7 +351,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.1
-  far clip plane: 1000
+  far clip plane: 10
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -428,6 +429,30 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f836272e873348f3ad96f4a1729bcd6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::OrbitCamera
+  target: {fileID: 1066570138}
+  targetOffset: {x: 0, y: -0.03, z: 0}
+  yaw: 0
+  pitch: 20
+  distance: 0.35
+  minPitch: -10
+  maxPitch: 85
+  minDistance: 0.12
+  maxDistance: 1
+  rotateSpeed: 0.25
+  zoomStep: 1.1
+  smoothTime: 0.08
 --- !u!1 &405971404
 GameObject:
   m_ObjectHideFlags: 0
@@ -1549,6 +1574,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d78f7f277b085bee0823621eb2012751, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GyroscopeController
+--- !u!4 &1066570138 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8544362435319980091, guid: b51919b1df7f5bc2eb65d208f53aab50, type: 3}
+  m_PrefabInstance: {fileID: 2191256755741678110}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1097630573
 GameObject:
   m_ObjectHideFlags: 0
