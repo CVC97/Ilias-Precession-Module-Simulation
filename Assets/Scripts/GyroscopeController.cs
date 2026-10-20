@@ -29,7 +29,9 @@ public class GyroscopeController : MonoBehaviour {
     // getter, so the UI can read the initial value
     public float Rpm => rpm;
     public float Theta0Deg => theta0Deg;
-    public float PhiDot0 => phiDot0;                                                    
+    public float PhiDot0 => phiDot0; 
+    // energy error
+    public double EnergyError => (gyroscope.Energy - e0) / (mass * gravity * leverArm);                                                   
 
 
     // methods for the UI to restart simulation upon parameter changes

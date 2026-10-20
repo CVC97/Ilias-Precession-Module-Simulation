@@ -1,4 +1,4 @@
-using System;              // Action<T>
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -11,6 +11,7 @@ public class SliderRow : MonoBehaviour {
 
     private string unit;
     private string format;
+    public float Value => slider.value;
 
 
     public void Setup(string labelText, float min, float max, float value, string unit, string format, Action<float> onChanged) {
