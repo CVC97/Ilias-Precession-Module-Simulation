@@ -15,8 +15,8 @@ public class ControlPanel : MonoBehaviour {
     [SerializeField] private Toggle toggleL;
     [SerializeField] private Toggle toggleOmega;
     [SerializeField] private Toggle toggleD;
-    [SerializeField] private ParticleSystem snow;
     [SerializeField] private Toggle toggleSnow;
+    [SerializeField] private ParticleSystem snow;
 
     [SerializeField] private Button resetButton;
     [SerializeField] private Button pauseButton;
