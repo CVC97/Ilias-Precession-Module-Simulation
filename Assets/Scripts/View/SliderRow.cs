@@ -11,13 +11,16 @@ public class SliderRow : MonoBehaviour {
 
     private string unit;
     private string format;
+    private Func<float, float> toDisplay;
     public float Value => slider.value;
 
 
-    public void Setup(string labelText, float min, float max, float value, string unit, string format, Action<float> onChanged) {
+    public void Setup(string labelText, float min, float max, float value, string unit, string format, 
+        Action<float> onChanged, Func<float, float> toDisplay = null) {
         // store unit and format, set the label text
         this.unit = unit;
         this.format = format;
+        this.toDisplay = toDisplay;
         label.text = labelText;
 
         // set range and value (BEFORE registering the listener — you know why)
@@ -38,6 +41,7 @@ public class SliderRow : MonoBehaviour {
 
     //  private helper for the value text
     private string Value2String(float value) {
-        return value.ToString(format) + " " + unit;
+        float shown = toDisplay != null ? toDisplay(value) : value;
+        return shown.ToString(format) + " " + unit;
     }
 }

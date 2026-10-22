@@ -22,12 +22,17 @@ public class ControlPanel : MonoBehaviour {
     [SerializeField] private Button pauseButton;
     [SerializeField] private TextMeshProUGUI pauseLabel;
     private bool paused;
+    private float currentTimeScale = 1f;
 
     [SerializeField] private TextMeshProUGUI readout;
     private float readoutTimer;
 
     
 
+    private void ApplyTimeScale(float t) {
+        Time.timeScale = t;
+        Time.fixedDeltaTime = 0.02f * Time.timeScale;  
+    }
 
 
     void Start() {
@@ -37,9 +42,14 @@ public class ControlPanel : MonoBehaviour {
         rpmRow.Setup("Drehzahl", 0f, 3000f, controller.Rpm, "rpm", "F0", controller.SetRpm);
         theta0Row.Setup("Neigung", 1, 89, controller.Theta0Deg, "°", "F0", controller.SetTheta0Deg);
         phiDot0Row.Setup("Präzession", -10, 10, controller.PhiDot0, "rad/s", "F2", controller.SetPhiDot0);
-        timeScaleRow.Setup("Zeitlupe", 0.05f, 1f, Time.timeScale, "×", "F2", v => {
-            if (!paused) Time.timeScale = v;
-        });
+        timeScaleRow.Setup("Zeitlupe", -2f, 0f, 0f, "×", "G2", 
+            v => {
+                currentTimeScale = Mathf.Pow(10f, v);
+                if (!paused) {
+                    ApplyTimeScale(currentTimeScale);
+                }
+            },
+            v => Mathf.Pow(10f, v));
 
         toggleL.isOn = vectors.ShowL;
         toggleOmega.isOn = vectors.ShowOmega;
@@ -56,7 +66,11 @@ public class ControlPanel : MonoBehaviour {
     void TogglePause() {
         paused = !paused;
         pauseLabel.text = paused ? "Weiter" : "Pause";
-        Time.timeScale = paused ? 0 : timeScaleRow.Value;
+        if (paused) {
+            Time.timeScale = 0f;
+        } else {
+            ApplyTimeScale(currentTimeScale);
+        }
     }
 
 
@@ -71,6 +85,7 @@ public class ControlPanel : MonoBehaviour {
         readout.text =
             $"θ = {model.Theta * Mathf.Rad2Deg:F1}°\n" +
             $"dφ/dt= {model.PhiDot:F2} rad/s\n" +
-            $"ΔE/(mgl) = {controller.EnergyError:E1}";
+            $"ΔE/(mgl) = {controller.EnergyError:E1}" +
+            (controller.SpinDisplayLimited ? "\nRotor: Darstellung verlangsamt" : "");
     }
 }

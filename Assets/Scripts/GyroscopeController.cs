@@ -18,6 +18,13 @@ public class GyroscopeController : MonoBehaviour {
     [SerializeField] private Integrator integrator = Integrator.RK4;            // setting Euler as standard integrator
     [SerializeField, Range(1, 1000)] private int substeps = 10;                 // adjusting the dt
 
+    [SerializeField] private float maxVisibleSpinRps = 5f;                     // revolutions per REAL second
+    private float displaySpinDeg;
+    public bool SpinDisplayLimited { get; private set; }
+
+    [SerializeField] private TrailRenderer trail;
+
+
     [SerializeField] private Transform rotor;
     private GyroscopeModel gyroscope;
     // make the model public
@@ -59,6 +66,9 @@ public class GyroscopeController : MonoBehaviour {
 
         gyroscope.SetInitialConditions(theta0, 0, phiDot0, omega3);             // setting the initial conditions of the model
         e0 = gyroscope.Energy;                                                  // storing the inital energy
+
+        ApplyPose();                          // safe now: no time step in it
+        if (trail != null) trail.Clear();
     }
 
 
@@ -102,13 +112,33 @@ public class GyroscopeController : MonoBehaviour {
 
 
     void Update() {
+        UpdateDisplaySpin();
+        ApplyPose();
+    }
+
+
+    private void UpdateDisplaySpin() {
+        float spinRateDeg = -(float)gyroscope.PsiDot * Mathf.Rad2Deg * Time.timeScale;
+        float maxRateDeg = maxVisibleSpinRps * 360f;
+
+        SpinDisplayLimited = Mathf.Abs(spinRateDeg) > maxRateDeg;
+        if (SpinDisplayLimited) {
+            spinRateDeg = Mathf.Sign(spinRateDeg) * maxRateDeg;                 // maximum spin rate
+        }
+
+        displaySpinDeg += spinRateDeg * Time.unscaledDeltaTime;                 // real time
+        displaySpinDeg = Mathf.Repeat(displaySpinDeg, 360f);                    // limited to [0, 360]
+    }
+
+
+    private void ApplyPose() {
         // model angles (rad, right-handed) → Unity degrees (left-handed: sign flip)
         float thetaDeg = PhysicsToUnity.Angle(gyroscope.Theta);
         float phiDeg = PhysicsToUnity.Angle(gyroscope.Phi);
-        float psiDeg = PhysicsToUnity.Angle(gyroscope.Psi);
+        // float psiDeg = PhysicsToUnity.Angle(gyroscope.Psi);
 
         // rotor
-        rotor.localRotation = Quaternion.AngleAxis(psiDeg, Vector3.up);         // around the vertical axis
+        rotor.localRotation = Quaternion.AngleAxis(displaySpinDeg, Vector3.up);         // around the vertical axis
 
         // gyroscope
         Quaternion tilt = Quaternion.AngleAxis(thetaDeg, Vector3.right);        // around the x axis
