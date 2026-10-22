@@ -19,7 +19,7 @@ public class VectorDisplay : MonoBehaviour {
     [Header("Scale (metres of arrow per physical unit)")]
     [SerializeField] private float scaleL = 11f;                            // m per kg·m²/s
     [SerializeField] private float scaleOmega = 4e-4f;                      // m per rad/s
-    [SerializeField] private float scaleD = 1.9f;                           // m per N·m
+    [SerializeField] private float scaleD = 2.5f;                           // m per N·m
 
     private GyroscopeController controller;
 

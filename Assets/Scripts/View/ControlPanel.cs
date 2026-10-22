@@ -15,6 +15,8 @@ public class ControlPanel : MonoBehaviour {
     [SerializeField] private Toggle toggleL;
     [SerializeField] private Toggle toggleOmega;
     [SerializeField] private Toggle toggleD;
+    [SerializeField] private ParticleSystem snow;
+    [SerializeField] private Toggle toggleSnow;
 
     [SerializeField] private Button resetButton;
     [SerializeField] private Button pauseButton;
@@ -23,6 +25,9 @@ public class ControlPanel : MonoBehaviour {
 
     [SerializeField] private TextMeshProUGUI readout;
     private float readoutTimer;
+
+    
+
 
 
     void Start() {
@@ -39,10 +44,12 @@ public class ControlPanel : MonoBehaviour {
         toggleL.isOn = vectors.ShowL;
         toggleOmega.isOn = vectors.ShowOmega;
         toggleD.isOn = vectors.ShowD;
+        toggleSnow.isOn = snow.gameObject.activeSelf;
 
         toggleL.onValueChanged.AddListener(v => vectors.ShowL = v);
         toggleOmega.onValueChanged.AddListener(v => vectors.ShowOmega = v);
         toggleD.onValueChanged.AddListener(v => vectors.ShowD = v);
+        toggleSnow.onValueChanged.AddListener(v => snow.gameObject.SetActive(v));
     }
 
 
