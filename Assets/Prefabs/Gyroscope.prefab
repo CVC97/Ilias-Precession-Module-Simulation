@@ -144,6 +144,9 @@ Transform:
   - {fileID: 366096009133614224}
   - {fileID: 734860512812130523}
   - {fileID: 2245624626263071730}
+  - {fileID: 5402576929755399707}
+  - {fileID: 7798060128363412247}
+  - {fileID: 7078938453126130832}
   m_Father: {fileID: 8544362435319980091}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3853478770035791735
@@ -726,9 +729,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83b227b7922f4ba379ad1e116fcfb3ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::VectorDisplay
-  arrowL: {fileID: 335528364919278346}
-  arrowOmega: {fileID: 832625634523795265}
-  arrowD: {fileID: 2204130038143235176}
+  arrowL: {fileID: 3473669818136622568}
+  arrowOmega: {fileID: 1654365888237865188}
+  arrowD: {fileID: 1797017993232932707}
   showL: 1
   showOmega: 1
   showD: 1
@@ -834,22 +837,15 @@ PrefabInstance:
       propertyPath: m_Name
       value: ArrowL
       objectReference: {fileID: 0}
+    - target: {fileID: 2968379868323314632, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
---- !u!114 &335528364919278346 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2602244018857947861, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
-  m_PrefabInstance: {fileID: 2356805789537892831}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!4 &366096009133614224 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2711637573161557327, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
@@ -907,6 +903,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ArrowOmega
       objectReference: {fileID: 0}
+    - target: {fileID: 2968379868323314632, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8250819014698215639, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -921,17 +921,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2711637573161557327, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
   m_PrefabInstance: {fileID: 3428105455409659284}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &832625634523795265 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2602244018857947861, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
-  m_PrefabInstance: {fileID: 3428105455409659284}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!1001 &4218645463557080765
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -984,6 +973,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ArrowD
       objectReference: {fileID: 0}
+    - target: {fileID: 2968379868323314632, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8250819014698215639, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -993,19 +986,247 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
---- !u!114 &2204130038143235176 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 2602244018857947861, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
-  m_PrefabInstance: {fileID: 4218645463557080765}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 28dc4a722749bc7e4917f593c7554461, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow
 --- !u!4 &2245624626263071730 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 2711637573161557327, guid: 1b7de510443748b7a80bfbd6a5e55b4a, type: 3}
   m_PrefabInstance: {fileID: 4218645463557080765}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &5147099052505986185
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 229091597553578183}
+    m_Modifications:
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.38022
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.18071
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.973249
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.22975293
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3241667042775422613, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744894324881309701, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_Name
+      value: Arrow3DL
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+--- !u!114 &3473669818136622568 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8600431744423362913, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+  m_PrefabInstance: {fileID: 5147099052505986185}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61c64cc336df89a74ba6c31981176ed3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow3D
+--- !u!4 &5402576929755399707 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+  m_PrefabInstance: {fileID: 5147099052505986185}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &7039022968070474117
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 229091597553578183}
+    m_Modifications:
+    - target: {fileID: 489969306096487154, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 5d970f3cf9ef9e603bab0fb1259615fa, type: 2}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.38022
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.18071
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.973249
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.22975293
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3241667042775422613, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744894324881309701, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_Name
+      value: Arrow3DOmega
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+--- !u!114 &1654365888237865188 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8600431744423362913, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+  m_PrefabInstance: {fileID: 7039022968070474117}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61c64cc336df89a74ba6c31981176ed3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow3D
+--- !u!4 &7798060128363412247 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+  m_PrefabInstance: {fileID: 7039022968070474117}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &8046407798256000514
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 229091597553578183}
+    m_Modifications:
+    - target: {fileID: 489969306096487154, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: f87422c22c036f95c968d7c427d6eef9, type: 2}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0.38022
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.15
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0.18071
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.973249
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.22975293
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3241667042775422613, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7744894324881309701, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+      propertyPath: m_Name
+      value: Arrow3DD
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+--- !u!114 &1797017993232932707 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8600431744423362913, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+  m_PrefabInstance: {fileID: 8046407798256000514}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61c64cc336df89a74ba6c31981176ed3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VectorArrow3D
+--- !u!4 &7078938453126130832 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 979502436120326802, guid: 10bed4e24877758c28617a7e4118c3d5, type: 3}
+  m_PrefabInstance: {fileID: 8046407798256000514}
   m_PrefabAsset: {fileID: 0}

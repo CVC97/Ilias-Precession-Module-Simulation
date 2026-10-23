@@ -4,9 +4,9 @@ using UnityEngine;
 [RequireComponent(typeof(GyroscopeController))]
 public class VectorDisplay : MonoBehaviour {
     [Header("Arrows")]
-    [SerializeField] private VectorArrow arrowL;
-    [SerializeField] private VectorArrow arrowOmega;
-    [SerializeField] private VectorArrow arrowD;
+    [SerializeField] private ArrowBase arrowL;
+    [SerializeField] private ArrowBase arrowOmega;
+    [SerializeField] private ArrowBase arrowD;
 
     [Header("Visibility")]
     [SerializeField] private bool showL = true;
@@ -25,7 +25,7 @@ public class VectorDisplay : MonoBehaviour {
 
 
     // general function to show or hide vectors
-    private void DrawOrHide(VectorArrow arrow, bool show, Vector3 vector, Vector3 pivot) {
+    private void DrawOrHide(ArrowBase arrow, bool show, Vector3 vector, Vector3 pivot) {
         if (show) {
             arrow.Draw(pivot, vector);
         } else {

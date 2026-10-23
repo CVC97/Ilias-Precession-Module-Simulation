@@ -2,7 +2,7 @@ using UnityEngine;
 
 
 [RequireComponent(typeof(LineRenderer))]
-public class VectorArrow : MonoBehaviour {
+public class VectorArrow : ArrowBase {
     [SerializeField] private LineRenderer head;                         // drag the child "Head" in here
     [SerializeField] private float shaftWidth = 0.0015f;                // m
     [SerializeField] private float headWidth  = 0.005f;                 // m (base of the head)
@@ -25,7 +25,7 @@ public class VectorArrow : MonoBehaviour {
     }
 
 
-    public void Draw(Vector3 origin, Vector3 vector) { 
+    public override void Draw(Vector3 origin, Vector3 vector) { 
         float length = vector.magnitude;
         // tiny vectors
         if (length < 1e-5f) {
