@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="26 26 76 84" width="152" height="168">
+  <!--
+    Loading-screen emblem: the symbol from Design/thumbnail.svg without background square and app bar.
+    Gaps are drawn in black so they merge with the black loading screen (page background #000).
+    Same 128-grid coordinates as the thumbnail; the viewBox crops to the symbol.
+  -->
+  <!-- precession path with arrow head -->
+  <!-- <path d="M 39.45 39.8 A 24 6.5 0 0 1 84.25 39.6" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <polygon points="88.8,42.6 85.8,37.3 82.7,41.9" fill="#fff" stroke="#fff" stroke-width="1" stroke-linejoin="round"/> -->
+
+  <!-- stand as one continuous shape -->
+  <rect x="38" y="99" width="48" height="7" rx="3.5" fill="#fff"/>
+  <rect x="58" y="72" width="8" height="29" fill="#fff"/>
+  <circle cx="62" cy="72" r="5.6" fill="#fff"/>
+  <line x1="62" y1="72" x2="74" y2="60" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- rotor disk: rim, red marker, front face cut free by a gap line, hub as a hole -->
+  <g transform="translate(74 60) rotate(45)">
+    <ellipse cx="0" cy="3.5" rx="19" ry="7.5" fill="#fff"/>
+    <rect x="-19" y="-3.5" width="38" height="7" fill="#fff"/>
+    <polygon points="6,3.62 6,10.62 10,9.88 10,2.88" fill="#e0192f"/>
+    <ellipse cx="0" cy="-3.5" rx="19" ry="7.5" fill="#fff" stroke="#000" stroke-width="2.6"/>
+    <circle cx="0" cy="-3.5" r="3" fill="#000"/>
+  </g>
+
+  <!-- axle, front part, cut free from the face -->
+  <line x1="78.2" y1="55.8" x2="86" y2="48" stroke="#000" stroke-width="8.6" stroke-linecap="round"/>
+  <line x1="78.2" y1="55.8" x2="86" y2="48" stroke="#fff" stroke-width="5"   stroke-linecap="round"/>
+</svg>
