@@ -1,0 +1,154 @@
+/* Precession Web template – noir style: black stage, white type, red as the only accent. */
+
+:root {
+  --ink:        #000000;
+  --paper:      #f2f2f2;
+  --grey:       #8a8a8a;
+  --grey-dark:  #262626;
+  --red:        #e0192f;
+  --yellow:     #f5c518;
+
+  /* Condensed title font: uses Bebas Neue / Oswald if installed or provided locally (see below),
+     otherwise falls back to narrow system fonts. No external font CDN (GDPR). */
+  --font-title: "Bebas Neue", "Oswald", "Arial Narrow", "Liberation Sans Narrow", "PT Sans Narrow",
+                "Roboto Condensed", sans-serif;
+  --font-body:  "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Optional: ship a font with the template – put the file into TemplateData/ and uncomment.
+@font-face {
+  font-family: "Bebas Neue";
+  src: url("BebasNeue-Regular.woff2") format("woff2");
+  font-display: swap;
+}
+*/
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;                 /* no scrollbars */
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-body);
+}
+
+/* ---- Unity canvas: full window ---- */
+#unity-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;                   /* mobile browsers: excludes the collapsing URL bar */
+  display: block;                   /* no gap below the inline canvas */
+  outline: none;                    /* no focus ring around the whole simulation */
+  background: var(--ink);
+}
+
+/* ---- Loading screen ---- */
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 1.5rem;
+  text-align: center;
+  /* spotlight from above + vignette, like the scene itself */
+  background:
+    radial-gradient(ellipse 45% 60% at 50% 38%, rgba(255, 255, 255, 0.07), transparent 70%),
+    radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.9) 100%),
+    var(--ink);
+  transition: opacity 0.7s ease;
+}
+
+#loading.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-emblem {
+  width: min(120px, 30vw);
+  height: auto;
+  margin-bottom: 0.8rem;
+}
+
+#loading-title {
+  margin: 0;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper);
+  /* hard ink-like edge */
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+#loading-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey);
+}
+
+#loading-bar {
+  width: min(280px, 70vw);
+  height: 2px;
+  margin-top: 1.2rem;
+  background: var(--grey-dark);
+  overflow: hidden;
+}
+
+#loading-fill {
+  width: 0;                         /* set by JS: 0 … 100 % */
+  height: 100%;
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(224, 25, 47, 0.8);
+  transition: width 0.2s linear;
+}
+
+#loading-text {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;   /* the percentage doesn't jitter */
+}
+
+#loading-error {
+  max-width: 34rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--red);
+}
+
+#loading.failed #loading-bar,
+#loading.failed #loading-text {
+  display: none;
+}
+
+/* ---- Fallback without JavaScript ---- */
+.fallback {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--paper);
+  font-family: var(--font-title);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #loading, #loading-fill { transition: none; }
+}

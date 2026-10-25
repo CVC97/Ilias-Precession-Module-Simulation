@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+  <title>Kreiselpräzession – Simulation</title>
+  <meta name="description" content="Interaktive Simulation eines präzedierenden Kreisels">
+  <link rel="icon" type="image/svg+xml" href="TemplateData/favicon.svg">
+  <link rel="stylesheet" href="TemplateData/style.css">
+</head>
+<body>
+  <!-- Unity renders into this canvas; its size comes from CSS (full window), the render
+       resolution follows automatically (CSS size × devicePixelRatio). -->
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+  <!-- Loading screen – faded out and removed once Unity is running -->
+  <div id="loading" role="status" aria-live="polite">
+    <img id="loading-emblem" src="TemplateData/emblem.svg" alt="" width="152" height="168">
+    <h1 id="loading-title">Kreiselpräzession</h1>
+    <p id="loading-subtitle">Simulation eines präzedierenden Kreisels</p>
+    <div id="loading-bar" aria-hidden="true"><div id="loading-fill"></div></div>
+    <p id="loading-text">Lädt … <span id="loading-percent">0 %</span></p>
+    <p id="loading-error" hidden></p>
+  </div>
+
+  <!-- 5.4: the HTML control panel will go here -->
+
+  <noscript>
+    <p class="fallback">Diese Simulation benötigt JavaScript.</p>
+  </noscript>
+
+  <script src="Build/docs.loader.js"></script>
+  <script>
+    const canvas  = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const fill    = document.querySelector("#loading-fill");
+    const percent = document.querySelector("#loading-percent");
+    const errorEl = document.querySelector("#loading-error");
+
+    // ---- Unity configuration (structure taken from Unity's Minimal template – keep the #if blocks) ----
+    const config = {
+      arguments: [],
+      dataUrl: "Build/docs.data.unityweb",
+      frameworkUrl: "Build/docs.framework.js.unityweb",
+      codeUrl: "Build/docs.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "Physik und ihre Didaktik",
+      productName: "Gyroscope Precession",
+      productVersion: "1.0.2",
+      // Sharp on HiDPI screens, but capped at 2× – 3× phone displays would cost a lot of GPU time for little gain.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    };
+
+    // Right mouse button is free for the camera later – no browser context menu on the canvas.
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    function showError(message) {
+      errorEl.textContent = "Die Simulation konnte nicht gestartet werden: " + message;
+      errorEl.hidden = false;
+      loading.classList.add("failed");
+    }
+
+    createUnityInstance(canvas, config, (progress) => {
+      // progress: 0 … 1
+      fill.style.width = (100 * progress) + "%";
+      percent.textContent = Math.round(100 * progress) + " %";
+    }).then((unityInstance) => {
+      window.unityInstance = unityInstance;           // global handle – the JS → C# bridge (5.2) uses it
+      loading.classList.add("done");                  // fade out (CSS transition) …
+      loading.addEventListener("transitionend", () => loading.remove(), { once: true });
+      canvas.focus();
+    }).catch(showError);
+  </script>
+</body>
+</html>
