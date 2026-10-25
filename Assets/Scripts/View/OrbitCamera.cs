@@ -11,11 +11,11 @@ public class OrbitCamera : MonoBehaviour {
     [Header("Start view")]
     [SerializeField] private float yaw = 0f;                                            // deg
     [SerializeField] private float pitch = 20f;                                         // deg
-    [SerializeField] private float distance = 0.35f;                                    // m
+    [SerializeField] private float distance = 0.5f;                                     // m
 
     [Header("Limits")]
     [SerializeField] private float minPitch = -10f, maxPitch = 85f;
-    [SerializeField] private float minDistance = 0.12f, maxDistance = 1.0f;
+    [SerializeField] private float minDistance = 0.35f, maxDistance = 1.35f;
 
     [Header("Feel")]
     [SerializeField] private float rotateSpeed = 0.25f;                                 // deg per pixel of mouse movement

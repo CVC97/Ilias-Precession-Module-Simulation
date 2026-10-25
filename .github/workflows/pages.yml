@@ -1,0 +1,52 @@
+# Publishes the committed Web build in docs/ to GitHub Pages.
+# Runs ONLY when a release tag is pushed (e.g. sim-v0.1.0) or when started manually in the Actions tab –
+# ordinary pushes to master (code, or even a new build in docs/) do not change the live page.
+#
+# The Unity build itself is made locally (File → Build Profiles → Build → docs/) and committed;
+# this workflow only uploads it, so no Unity licence is needed in CI.
+
+name: Deploy simulation to GitHub Pages
+
+on:
+  push:
+    tags:
+      - "sim-v*"
+  workflow_dispatch:
+
+# Minimal rights: read the repo, write to Pages, prove identity to the Pages service.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deployments at the same time; a newer one waits, an older one is not cancelled mid-upload.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v4
+
+      - name: Make sure a build is present
+        run: |
+          test -f docs/index.html || { echo "docs/index.html missing – build into docs/ and commit it before tagging."; exit 1; }
+          ls -la docs docs/Build
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload docs/ as the Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

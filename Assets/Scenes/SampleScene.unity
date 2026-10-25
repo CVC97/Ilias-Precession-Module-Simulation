@@ -435,11 +435,11 @@ MonoBehaviour:
   targetOffset: {x: 0, y: -0.03, z: 0}
   yaw: 0
   pitch: 20
-  distance: 0.35
+  distance: 0.5
   minPitch: -10
   maxPitch: 85
-  minDistance: 0.12
-  maxDistance: 1
+  minDistance: 0.35
+  maxDistance: 1.35
   rotateSpeed: 0.25
   zoomStep: 1.1
   smoothTime: 0.08
@@ -7840,6 +7840,70 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1534128563}
   m_CullTransparentMesh: 1
+--- !u!1 &1578540382
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1578540384}
+  - component: {fileID: 1578540385}
+  - component: {fileID: 1578540386}
+  m_Layer: 0
+  m_Name: WebBridge
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1578540384
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1578540382}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.00711, y: 0.2111, z: 0.02695}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1578540385
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1578540382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4544a662e0f4738cb83ad4fb5516f6f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WebBridge
+  controller: {fileID: 1066570136}
+  vectors: {fileID: 1066570135}
+  simTime: {fileID: 1578540386}
+  snow: {fileID: 362681164}
+  snowFast: {fileID: 632717254}
+  uiCanvas: {fileID: 1097630573}
+  hideUguiInBrowser: 0
+--- !u!114 &1578540386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1578540382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b89e9881f4021571b98693c1a5138a1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimulationTime
 --- !u!1 &1659131229
 GameObject:
   m_ObjectHideFlags: 0
@@ -7966,6 +8030,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ControlPanel
   controller: {fileID: 1066570136}
+  simTime: {fileID: 1578540386}
   rpmRow: {fileID: 1070254081351919739}
   theta0Row: {fileID: 2102538535}
   phiDot0Row: {fileID: 1054271842}
@@ -9926,3 +9991,4 @@ SceneRoots:
   - {fileID: 362681165}
   - {fileID: 632717255}
   - {fileID: 647600901}
+  - {fileID: 1578540384}

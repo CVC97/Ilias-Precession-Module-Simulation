@@ -6,6 +6,7 @@ using TMPro;
 
 public class ControlPanel : MonoBehaviour {
     [SerializeField] private GyroscopeController controller;
+    [SerializeField] private SimulationTime simTime;
     [SerializeField] private SliderRow rpmRow;
     [SerializeField] private SliderRow theta0Row;
     [SerializeField] private SliderRow phiDot0Row;
@@ -22,64 +23,47 @@ public class ControlPanel : MonoBehaviour {
     [SerializeField] private Button resetButton;
     [SerializeField] private Button pauseButton;
     [SerializeField] private TextMeshProUGUI pauseLabel;
-    private bool paused;
-    private float currentTimeScale = 1f;
 
     [SerializeField] private TextMeshProUGUI readout;
     private float readoutTimer;
 
-    
-
-    private void ApplyTimeScale(float t) {
-        Time.timeScale = t;
-        Time.fixedDeltaTime = 0.02f * Time.timeScale;  
-    }
-
 
     void Start() {
-        pauseButton.onClick.AddListener(TogglePause);
+        pauseButton.onClick.AddListener(simTime.TogglePause);
         resetButton.onClick.AddListener(controller.ResetSimulation);
+        pauseLabel.text = simTime.Paused ? "Weiter" : "Pause";
+
 
         rpmRow.Setup("Drehzahl", 0f, 3000f, controller.Rpm, "rpm", "F0", controller.SetRpm);
         theta0Row.Setup("Neigung", 1, 89, controller.Theta0Deg, "°", "F0", controller.SetTheta0Deg);
         phiDot0Row.Setup("Präzession", -10, 10, controller.PhiDot0, "rad/s", "F2", controller.SetPhiDot0);
-        timeScaleRow.Setup("Zeitlupe", -2f, 0f, 0f, "×", "G2", 
-            v => {
-                currentTimeScale = Mathf.Pow(10f, v);
-                if (!paused) {
-                    ApplyTimeScale(currentTimeScale);
-                }
-            },
+        timeScaleRow.Setup("Zeitlupe", -2f, 0f, Mathf.Log10(simTime.TimeScale), "×", "G2",
+            v => simTime.SetTimeScale(Mathf.Pow(10f, v)),
             v => Mathf.Pow(10f, v));
 
         toggleL.isOn = vectors.ShowL;
         toggleOmega.isOn = vectors.ShowOmega;
         toggleD.isOn = vectors.ShowD;
         toggleSnow.isOn = snow.gameObject.activeSelf;
-        toggleSnow.isOn = snowFast.gameObject.activeSelf;
 
         toggleL.onValueChanged.AddListener(v => vectors.ShowL = v);
         toggleOmega.onValueChanged.AddListener(v => vectors.ShowOmega = v);
         toggleD.onValueChanged.AddListener(v => vectors.ShowD = v);
-        toggleSnow.onValueChanged.AddListener(v => snow.gameObject.SetActive(v));
-        toggleSnow.onValueChanged.AddListener(v => snowFast.gameObject.SetActive(v));
-    }
-
-
-    void TogglePause() {
-        paused = !paused;
-        pauseLabel.text = paused ? "Weiter" : "Pause";
-        if (paused) {
-            Time.timeScale = 0f;
-        } else {
-            ApplyTimeScale(currentTimeScale);
-        }
+        toggleSnow.onValueChanged.AddListener(
+            v => {
+                snow.gameObject.SetActive(v); 
+                snowFast.gameObject.SetActive(v);
+            }
+        );
     }
 
 
     void Update() {
         readoutTimer += Time.unscaledDeltaTime;
-        if (readoutTimer < 0.1f) return;                                    // only ~10× per second (otherwise flickering unreadable)
+        // only ~10× per second (otherwise flickering unreadable)
+        if (readoutTimer < 0.1f) {
+            return;
+        }                                    
         readoutTimer = 0f;
 
         GyroscopeModel model = controller.Model;
