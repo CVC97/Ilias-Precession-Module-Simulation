@@ -59,6 +59,8 @@ public class ControlPanel : MonoBehaviour {
 
 
     void Update() {
+        pauseLabel.text = simTime.Paused ? "Weiter" : "Pause";
+
         readoutTimer += Time.unscaledDeltaTime;
         // only ~10× per second (otherwise flickering unreadable)
         if (readoutTimer < 0.1f) {
