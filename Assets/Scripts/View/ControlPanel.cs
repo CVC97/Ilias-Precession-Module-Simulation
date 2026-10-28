@@ -44,17 +44,21 @@ public class ControlPanel : MonoBehaviour {
         toggleL.isOn = vectors.ShowL;
         toggleOmega.isOn = vectors.ShowOmega;
         toggleD.isOn = vectors.ShowD;
-        toggleSnow.isOn = snow.gameObject.activeSelf;
 
         toggleL.onValueChanged.AddListener(v => vectors.ShowL = v);
         toggleOmega.onValueChanged.AddListener(v => vectors.ShowOmega = v);
         toggleD.onValueChanged.AddListener(v => vectors.ShowD = v);
-        toggleSnow.onValueChanged.AddListener(
-            v => {
-                snow.gameObject.SetActive(v); 
-                snowFast.gameObject.SetActive(v);
-            }
-        );
+
+        // the module scene has no snow (and no snow toggle)
+        if (snow != null) {
+            toggleSnow.isOn = snow.gameObject.activeSelf;
+            toggleSnow.onValueChanged.AddListener(
+                v => {
+                    snow.gameObject.SetActive(v);
+                    snowFast.gameObject.SetActive(v);
+                }
+            );
+        }
     }
 
 

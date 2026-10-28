@@ -1,0 +1,110 @@
+/* Precession Web template, learning-module version: plain and light like the module pages,
+   so the iframe blends into the page. Colours from the module's styles.css. */
+
+:root {
+  --bg:      #f0f2f5;                 /* module page background (light) */
+  --text:    #4b5563;
+  --track:   rgb(217, 218, 218);      /* grau-20 */
+  --accent:  rgb(0, 95, 155);         /* uni-blau-2 */
+  --error:   rgb(199, 13, 45);
+  --font:    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+:root[data-theme="dark"] {
+  --bg:      #111827;                 /* module page background (dark) */
+  --text:    #cbd5e1;
+  --track:   #1e293b;                 /* dark card */
+  --accent:  rgb(80, 165, 210);       /* uni-blau-4 */
+  --error:   #f87171;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;                   /* no scrollbars */
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+/* ---- Unity canvas: full window (= full iframe when embedded) ---- */
+#unity-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;                     /* mobile browsers: excludes the collapsing URL bar */
+  display: block;                     /* no gap below the inline canvas */
+  outline: none;                      /* no focus ring around the whole simulation */
+  background: var(--bg);
+}
+
+/* ---- Loading screen ---- */
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: var(--bg);
+  transition: opacity 0.5s ease;
+}
+
+#loading.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-bar {
+  width: min(240px, 60vw);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+#loading-fill {
+  width: 0;                           /* set by JS: 0 … 100 % */
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s linear;
+}
+
+#loading-text {
+  margin: 0;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums; /* the percentage doesn't jitter */
+}
+
+#loading-error {
+  max-width: 34rem;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--error);
+}
+
+#loading.failed #loading-bar,
+#loading.failed #loading-text {
+  display: none;
+}
+
+/* ---- Fallback without JavaScript ---- */
+.fallback {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #loading, #loading-fill { transition: none; }
+}

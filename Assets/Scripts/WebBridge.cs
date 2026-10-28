@@ -65,6 +65,7 @@ public class WebBridge : MonoBehaviour {
 
 
     public void SetSnow(float on) {
+        if (snow == null) return;                                           // module scene: no snow
         snow.gameObject.SetActive(on > 0.5f);
         snowFast.gameObject.SetActive(on > 0.5f);
     }

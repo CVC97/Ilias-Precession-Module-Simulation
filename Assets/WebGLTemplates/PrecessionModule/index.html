@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+  <title>Kreiselpräzession – Simulation (Lernmodul)</title>
+  <link rel="icon" type="image/svg+xml" href="TemplateData/favicon.svg">
+  <link rel="stylesheet" href="TemplateData/style.css">
+  <script>
+    // ?theme=dark from the module page: dark loading screen, no white flash in the iframe
+    if (new URLSearchParams(location.search).get("theme") === "dark") {
+      document.documentElement.dataset.theme = "dark";
+    }
+  </script>
+</head>
+<body>
+  <!-- Unity renders into this canvas; its size comes from CSS (full window/iframe), the render
+       resolution follows automatically (CSS size × devicePixelRatio). -->
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+  <!-- Loading screen – faded out and removed once Unity is running -->
+  <div id="loading" role="status" aria-live="polite">
+    <div id="loading-bar" aria-hidden="true"><div id="loading-fill"></div></div>
+    <p id="loading-text">Simulation lädt … <span id="loading-percent">0 %</span></p>
+    <p id="loading-error" hidden></p>
+  </div>
+
+  <noscript>
+    <p class="fallback">Diese Simulation benötigt JavaScript.</p>
+  </noscript>
+
+  <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+  <script>
+    const canvas  = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const fill    = document.querySelector("#loading-fill");
+    const percent = document.querySelector("#loading-percent");
+    const errorEl = document.querySelector("#loading-error");
+
+    // ---- Unity configuration (structure taken from Unity's Minimal template – keep the #if blocks) ----
+    const config = {
+      arguments: [],
+#if PROGRESSIVE_ASSET_LOADING
+      primaryDataUrls: {{{ JSON.stringify(PRIMARY_DATA_FILES) }}},
+      secondaryDataUrls: {{{ JSON.stringify(SECONDARY_DATA_FILES) }}},
+#else
+      dataUrl: "Build/{{{ DATA_FILENAME }}}",
+#endif
+      frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+      codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+      symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      // Sharp on HiDPI screens, but capped at 2× – 3× phone displays would cost a lot of GPU time for little gain.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    };
+
+    // Right mouse button belongs to the camera – no browser context menu on the canvas.
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    function showError(message) {
+      errorEl.textContent = "Die Simulation konnte nicht gestartet werden: " + message;
+      errorEl.hidden = false;
+      loading.classList.add("failed");
+    }
+
+    createUnityInstance(canvas, config, (progress) => {
+      // progress: 0 … 1
+      fill.style.width = (100 * progress) + "%";
+      percent.textContent = Math.round(100 * progress) + " %";
+    }).then((unityInstance) => {
+      window.unityInstance = unityInstance;           // global handle for the JS → C# bridge (step 5)
+      loading.classList.add("done");                  // fade out (CSS transition) …
+      loading.addEventListener("transitionend", () => loading.remove(), { once: true });
+    }).catch(showError);
+
+    // step 5: postMessage listener (origin check, command allowlist) → unityInstance.SendMessage("WebBridge", …)
+  </script>
+</body>
+</html>
