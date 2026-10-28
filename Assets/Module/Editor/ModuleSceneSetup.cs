@@ -12,6 +12,7 @@ using UnityEngine.SceneManagement;
 //   Module → Apply studio look     (re)applies materials, lights, fog, reflections and post-processing to the open module scene;
 //                                  overwrites manual changes to these, so tune the values here while we iterate
 //   Module → Use module controller  (step 2, once) swaps GyroscopeController for ModuleGyroscopeController
+//   Module → Build lab gyroscope    (step 3, once) replaces the toy top by the lab apparatus (dimensions from LabGyroscope)
 // The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
@@ -24,6 +25,8 @@ public static class ModuleSceneSetup {
     private const string ReflectionCubemapPath = "Assets/Module/Textures/studio_reflection.hdr";
     private const int ReflectionFaceSize = 128;                                         // px per cube face; reflections only, never visible
     private const string LabAssetPath = "Assets/Module/LabGyroscope.asset";
+    private const string MeshFolder = "Assets/Module/Meshes";
+    private const string CylinderMeshPath = "Assets/Module/Meshes/SmoothCylinder.asset";
 
     // module colours (sRGB), from ../ilias-precession-module/frontend/src/styles.css
     private static readonly Color32 UniBlau1 = new Color32(21, 50, 104, 255);
@@ -125,6 +128,148 @@ public static class ModuleSceneSetup {
     }
 
 
+    // lab apparatus (Bild 4.1 of the script), built from primitives; local up of the Gyroscope object = figure axis,
+    // pointing to the counterweight side
+    private const float PivotHeight = 0.33f;                                    // m above the floor
+    private const float StringLength = 0.12f;                                   // m, notch to the first disc
+
+    [MenuItem("Module/Build lab gyroscope")]
+    private static void BuildLabGyroscope() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        Transform gyroscope = FindInScene(scene, "Gyroscope");
+        var controller = gyroscope.GetComponent<ModuleGyroscopeController>();
+        if (controller == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run Module → Use module controller first.", "OK");
+            return;
+        }
+        if (gyroscope.Find("Body/Counterweight") != null) {
+            EditorUtility.DisplayDialog("Module scene", "The lab gyroscope is already built.", "OK");
+            return;
+        }
+        LabGyroscope lab = LabAsset();
+        float wheelRadius = lab.WheelRadius, wheelDistance = lab.WheelDistance, notch = lab.NotchDistance;
+        float axleStart = -(wheelDistance + 0.06f), axleEnd = notch + 0.02f;
+
+        // stand: base plate, rod, bearing block that turns with φ
+        Transform stand = FindInScene(scene, "Stand");
+        if (PrefabUtility.IsPartOfPrefabInstance(stand.gameObject)) {
+            PrefabUtility.UnpackPrefabInstance(stand.gameObject, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        }
+        DeleteChildren(stand);
+        stand.SetPositionAndRotation(new Vector3(gyroscope.position.x, 0f, gyroscope.position.z), Quaternion.identity);
+        Part("Base", PrimitiveType.Cube, stand, new Vector3(0f, 0.015f, 0f), new Vector3(0.36f, 0.03f, 0.16f), "ModuleBase");
+        float rodTop = PivotHeight - 0.025f;
+        Part("Rod", PrimitiveType.Cylinder, stand, new Vector3(0f, (0.03f + rodTop) / 2, 0f),
+             new Vector3(0.012f, (rodTop - 0.03f) / 2, 0.012f), "ModuleTower");
+        Transform head = Empty("PivotHead", stand, new Vector3(0f, PivotHeight, 0f));
+        Part("Block", PrimitiveType.Cube, head, Vector3.zero, new Vector3(0.04f, 0.05f, 0.04f), "ModuleMarker");
+        SetReference(head.gameObject.AddComponent<PivotHead>(), "controller", controller);
+
+        // the gyroscope object sits in the pivot
+        gyroscope.position = new Vector3(gyroscope.position.x, PivotHeight, gyroscope.position.z);
+
+        // rotor: wheel with hub and the strip for the light barrier, on the far side of the pivot
+        Transform rotor = gyroscope.Find("Rotor");
+        DeleteChildren(rotor);
+        rotor.localPosition = new Vector3(0f, -wheelDistance, 0f);
+        Part("Wheel", PrimitiveType.Cylinder, rotor, Vector3.zero, new Vector3(2*wheelRadius, 0.015f, 2*wheelRadius), "ModuleWheel");
+        Part("Hub", PrimitiveType.Cylinder, rotor, Vector3.zero, new Vector3(0.05f, 0.025f, 0.05f), "ModuleTower");
+        Part("Strip", PrimitiveType.Cube, rotor, new Vector3(wheelRadius + 0.008f, 0f, 0f), new Vector3(0.02f, 0.012f, 0.003f), "ModuleMarker");
+
+        // body: axle, counterweight, axle end with the trail, add-on weight in the notch
+        Transform body = gyroscope.Find("Body");
+        foreach (string oldPart in new[] { "PivotBall", "AxleTip", "Axle" }) {
+            Transform t = body.Find(oldPart);
+            if (t != null) Object.DestroyImmediate(t.gameObject);
+        }
+        Part("Axle", PrimitiveType.Cylinder, body, new Vector3(0f, (axleStart + axleEnd) / 2, 0f),
+             new Vector3(0.006f, (axleEnd - axleStart) / 2, 0.006f), "ModuleAxle");
+        Part("Counterweight", PrimitiveType.Cylinder, body, new Vector3(0f, lab.CounterweightDistance, 0f),
+             new Vector3(0.058f, 0.0215f, 0.058f), "ModuleAxle");
+        Transform tip = body.Find("Tip");                                       // carries the TrailRenderer
+        tip.localPosition = new Vector3(0f, axleEnd, 0f);
+        tip.GetComponent<TrailRenderer>().widthMultiplier = 0.003f;
+
+        Transform weight = Empty("AddOnWeight", body, new Vector3(0f, notch, 0f));
+        Transform hanger = Empty("StringAndHook", weight, Vector3.zero);
+        Part("String", PrimitiveType.Cylinder, hanger, new Vector3(0f, -StringLength / 2, 0f),
+             new Vector3(0.0015f, StringLength / 2, 0.0015f), "ModuleMarker");
+        Part("Hook", PrimitiveType.Cylinder, hanger, new Vector3(0f, -StringLength - 0.004f, 0f),
+             new Vector3(0.006f, 0.006f, 0.006f), "ModuleMarker");
+        var discs = new GameObject[6];
+        for (int i = 0; i < discs.Length; i++) {
+            discs[i] = Part($"Disc{(i + 1) * 10}g", PrimitiveType.Cylinder, weight,
+                            new Vector3(0f, -StringLength - 0.013f - 0.006f*i, 0f), new Vector3(0.04f, 0.0025f, 0.04f), "ModuleMarker").gameObject;
+        }
+        var hanging = new SerializedObject(weight.gameObject.AddComponent<HangingWeight>());
+        hanging.FindProperty("controller").objectReferenceValue = controller;
+        hanging.FindProperty("stringAndHook").objectReferenceValue = hanger.gameObject;
+        SerializedProperty discList = hanging.FindProperty("discs");
+        discList.arraySize = discs.Length;
+        for (int i = 0; i < discs.Length; i++) discList.GetArrayElementAtIndex(i).objectReferenceValue = discs[i];
+        hanging.ApplyModifiedPropertiesWithoutUndo();
+
+        // arrow lengths with the defaults: L ≈ 0.35 m, ω ≈ 0.22 m, D ≈ 0.2 m (thickness: ApplyLook)
+        var vectors = new SerializedObject(gyroscope.GetComponent<VectorDisplay>());
+        vectors.FindProperty("scaleL").floatValue = 0.9f;
+        vectors.FindProperty("scaleOmega").floatValue = 0.0053f;
+        vectors.FindProperty("scaleD").floatValue = 2.5f;
+        vectors.ApplyModifiedPropertiesWithoutUndo();
+
+        // camera for the larger apparatus
+        var orbit = new SerializedObject(FindInScene(scene, "Main Camera").GetComponent<OrbitCamera>());
+        orbit.FindProperty("targetOffset").vector3Value = new Vector3(0f, -0.08f, 0f);
+        orbit.FindProperty("distance").floatValue = 1.1f;
+        orbit.FindProperty("minDistance").floatValue = 0.6f;
+        orbit.FindProperty("maxDistance").floatValue = 2.0f;
+        orbit.ApplyModifiedPropertiesWithoutUndo();
+
+        ApplyLook(scene);                                                       // fog distances and light follow the new size
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Lab gyroscope built.");
+    }
+
+
+    // primitive without collider (no physics engine involved: we integrate ourselves)
+    private static Transform Part(string name, PrimitiveType type, Transform parent, Vector3 localPosition, Vector3 localScale, string material) {
+        GameObject go = GameObject.CreatePrimitive(type);
+        go.name = name;
+        Object.DestroyImmediate(go.GetComponent<Collider>());
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPosition;
+        go.transform.localScale = localScale;
+        go.GetComponent<MeshRenderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>($"{MaterialFolder}/{material}.mat");
+        return go.transform;
+    }
+
+
+    private static Transform Empty(string name, Transform parent, Vector3 localPosition) {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPosition;
+        return go.transform;
+    }
+
+
+    private static void DeleteChildren(Transform t) {
+        for (int i = t.childCount - 1; i >= 0; i--) {
+            Object.DestroyImmediate(t.GetChild(i).gameObject);
+        }
+    }
+
+
+    private static void SetReference(Object component, string field, Object value) {
+        var so = new SerializedObject(component);
+        so.FindProperty(field).objectReferenceValue = value;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+
     private static LabGyroscope LabAsset() {
         var lab = AssetDatabase.LoadAssetAtPath<LabGyroscope>(LabAssetPath);
         if (lab == null) {
@@ -155,13 +300,32 @@ public static class ModuleSceneSetup {
         AssetDatabase.SaveAssets();
         SwapMaterials(scene, remap);
 
+        // apparatus: smooth cylinders instead of the 20-sided primitive (the wheel rim showed facets);
+        // arrows slightly thicker than the axle (6 mm), on which L and ω lie, so the surfaces don't z-fight
+        Mesh cylinder = SmoothCylinder();
+        foreach (string root in new[] { "Gyroscope", "Stand" }) {
+            foreach (MeshFilter filter in FindInScene(scene, root).GetComponentsInChildren<MeshFilter>(true)) {
+                if (filter.sharedMesh != null && filter.sharedMesh.name == "Cylinder") {
+                    filter.sharedMesh = cylinder;
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(filter);
+                }
+            }
+        }
+        foreach (VectorArrow3D arrow in FindInScene(scene, "Gyroscope").GetComponentsInChildren<VectorArrow3D>(true)) {
+            var a = new SerializedObject(arrow);
+            a.FindProperty("shaftDiameter").floatValue = 0.007f;
+            a.FindProperty("headDiameter").floatValue = 0.020f;
+            a.FindProperty("headLength").floatValue = 0.038f;
+            a.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         // stage: large floor that fades into the background through fog of the same colour
         FindInScene(scene, "Floor").localScale = new Vector3(30f, 0.001f, 30f);
         RenderSettings.fog = true;
         RenderSettings.fogMode = FogMode.Linear;
         RenderSettings.fogColor = StageColor;
-        RenderSettings.fogStartDistance = 1.6f;                                     // beyond the camera's max distance (1.35 m)
-        RenderSettings.fogEndDistance = 5f;
+        RenderSettings.fogStartDistance = 2.6f;                                     // beyond the camera's max distance (2 m)
+        RenderSettings.fogEndDistance = 7f;
 
         Camera cam = FindInScene(scene, "Main Camera").GetComponent<Camera>();
         cam.clearFlags = CameraClearFlags.SolidColor;
@@ -258,6 +422,61 @@ public static class ModuleSceneSetup {
             importer.SaveAndReimport();
         }
         return AssetDatabase.LoadAssetAtPath<Cubemap>(ReflectionCubemapPath);
+    }
+
+
+    // like Unity's cylinder primitive (radius 0.5, y from −1 to 1, so all scales stay valid), but with 96 sides;
+    // smooth normals on the side, flat caps with their own vertices (sharp rim edge). Saved once as a mesh asset.
+    private static Mesh SmoothCylinder() {
+        var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(CylinderMeshPath);
+        if (mesh != null) {
+            return mesh;
+        }
+        const int segments = 96;
+        const float r = 0.5f;
+        var vertices = new List<Vector3>();
+        var normals = new List<Vector3>();
+        var triangles = new List<int>();
+
+        // side: bottom/top vertex pairs with radial normals (front faces wind so that cross(B−A, C−A) points outwards)
+        for (int i = 0; i <= segments; i++) {
+            float a = 2*Mathf.PI/segments * i;
+            var radial = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+            vertices.Add(new Vector3(r*radial.x, -1f, r*radial.z));
+            vertices.Add(new Vector3(r*radial.x, 1f, r*radial.z));
+            normals.Add(radial);
+            normals.Add(radial);
+        }
+        for (int i = 0; i < segments; i++) {
+            int b = 2*i;                                                            // bottom_i, top_i, bottom_i+1, top_i+1
+            triangles.AddRange(new[] { b, b + 1, b + 2, b + 1, b + 3, b + 2 });
+        }
+
+        // caps: centre + ring, normal ±y
+        foreach (float y in new[] { 1f, -1f }) {
+            int centre = vertices.Count;
+            vertices.Add(new Vector3(0f, y, 0f));
+            normals.Add(new Vector3(0f, y, 0f));
+            for (int i = 0; i <= segments; i++) {
+                float a = 2*Mathf.PI/segments * i;
+                vertices.Add(new Vector3(r*Mathf.Cos(a), y, r*Mathf.Sin(a)));
+                normals.Add(new Vector3(0f, y, 0f));
+            }
+            for (int i = 0; i < segments; i++) {
+                int ring = centre + 1 + i;
+                if (y > 0) triangles.AddRange(new[] { centre, ring + 1, ring });
+                else triangles.AddRange(new[] { centre, ring, ring + 1 });
+            }
+        }
+
+        mesh = new Mesh { name = "SmoothCylinder" };
+        mesh.SetVertices(vertices);
+        mesh.SetNormals(normals);
+        mesh.SetTriangles(triangles, 0);
+        mesh.RecalculateBounds();
+        if (!AssetDatabase.IsValidFolder(MeshFolder)) AssetDatabase.CreateFolder(ModuleFolder, "Meshes");
+        AssetDatabase.CreateAsset(mesh, CylinderMeshPath);
+        return mesh;
     }
 
 

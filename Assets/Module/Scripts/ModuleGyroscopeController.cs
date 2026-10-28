@@ -13,9 +13,13 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     [Header("Experiment")]
     [SerializeField, Range(0f, 1000f)] private float rpm = 400f;                // Drehzahl of the wheel
     [SerializeField, Range(0f, 60f)] private float addOnMassGrams = 30f;        // Zusatzgewicht
-    [SerializeField, Range(30f, 150f)] private float theta0Deg = 90f;           // Neigung θ₀; 90° = horizontal axle
+    [SerializeField, Range(60f, 120f)] private float theta0Deg = 90f;           // Neigung θ₀; 90° = horizontal axle
+                                                                                // (beyond ±30° the wheel would hit the stand)
     [SerializeField] private StartMode startMode = StartMode.Guided;
     [SerializeField] private bool friction = false;                             // Reibung
+    // spin sense: the model's figure axis points to the counterweight side, so a negative ω3 makes L point from the
+    // pivot through the wheel, as in textbook figures; precession then runs the other way round (same magnitude)
+    [SerializeField] private bool angularMomentumThroughWheel = true;
 
     [Header("Push (Stoß)")]
     [SerializeField] private float pushThetaDot = 0.5f;                         // rad/s, knock on the axle from above/below
@@ -49,8 +53,9 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public StartMode SelectedStartMode => startMode;                            // "StartMode" is taken by the enum
     public bool Friction => friction;
 
-    public double OmegaR => gyroscope.PsiDot;                                   // what the light barrier sees: wheel against axle
-    public double OmegaP => gyroscope.PhiDot;
+    // readouts as magnitudes (the signs only encode the spin sense)
+    public double OmegaR => Math.Abs(gyroscope.PsiDot);                         // what the light barrier sees: wheel against axle
+    public double OmegaP => Math.Abs(gyroscope.PhiDot);
     // relative to the initial spin energy (m g l is 0 for the balanced gyroscope); only meaningful without friction
     public double EnergyError => spinEnergy0 > 0 ? (gyroscope.Energy - e0) / spinEnergy0 : 0;
 
@@ -99,7 +104,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         gyroscope = GyroscopeModel.FromInertia(lab.I1(addOnMass), lab.I3, lab.TorqueConst(addOnMass));
         gyroscope.FrictionCoeff = friction ? lab.FrictionCoeff : 0;
 
-        double omega3 = rpm * 2*Math.PI / 60;
+        double omega3 = (angularMomentumThroughWheel ? -1 : 1) * rpm * 2*Math.PI / 60;
         double theta0 = theta0Deg * Math.PI / 180;
         double phiDot0 = 0;                                                     // released: the axle starts at rest
         if (startMode == StartMode.Guided) {

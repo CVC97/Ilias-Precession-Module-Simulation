@@ -63,6 +63,22 @@ public class GyroscopeModelTests {
     }
 
 
+    // reversed spin (the module lets L point through the wheel): same magnitude, opposite sense, θ stays put
+    [Test]
+    public void GuidedStartWithReversedSpin() {
+        var model = GyroscopeModel.FromInertia(I1, I3, Loaded);
+        double rate = model.SteadyPrecessionRate(Deg(70), -Omega3);
+        model.SetInitialConditions(Deg(70), 0, rate, -Omega3);
+        double maxDeviation = 0;
+
+        Run(model, 5, 1e-3, t => maxDeviation = Math.Max(maxDeviation, Math.Abs(model.Theta - Deg(70))));
+
+        Assert.That(rate, Is.LessThan(0));
+        Assert.That(-rate, Is.EqualTo(model.SteadyPrecessionRate(Deg(70), Omega3)).Within(1e-12));    // φ̇ → −φ̇ for ω3 → −ω3
+        Assert.That(maxDeviation, Is.LessThan(1e-9));
+    }
+
+
     [TestCase(60.0)]
     [TestCase(120.0)]
     public void PrecessionRateNearlyIndependentOfTheta(double thetaDeg) {
