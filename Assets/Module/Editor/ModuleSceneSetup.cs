@@ -18,7 +18,10 @@ public static class ModuleSceneSetup {
     private const string MaterialFolder = "Assets/Module/Materials";
     private const string ModuleScenePath = "Assets/Module/ModuleScene.unity";
     private const string VolumeProfilePath = "Assets/Module/ModuleVolumeProfile.asset";
-    private const string StudioCubemap = "Assets/Textures/studio_small_09_2k.hdr";     // only for reflections, never visible
+    private const string StudioHdr = "Assets/Textures/studio_small_09_2k.hdr";         // the original's visible skybox
+    private const string TextureFolder = "Assets/Module/Textures";
+    private const string ReflectionCubemapPath = "Assets/Module/Textures/studio_reflection.hdr";
+    private const int ReflectionFaceSize = 128;                                         // px per cube face; reflections only, never visible
 
     // module colours (sRGB), from ../ilias-precession-module/frontend/src/styles.css
     private static readonly Color32 UniBlau1 = new Color32(21, 50, 104, 255);
@@ -131,7 +134,7 @@ public static class ModuleSceneSetup {
         RenderSettings.ambientEquatorColor = new Color32(165, 172, 182, 255);
         RenderSettings.ambientGroundColor = new Color32(110, 114, 120, 255);
         RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
-        RenderSettings.customReflectionTexture = AssetDatabase.LoadAssetAtPath<Cubemap>(StudioCubemap);
+        RenderSettings.customReflectionTexture = ReflectionCubemap();
         RenderSettings.reflectionIntensity = 0.9f;
 
         ApplyPostProcessing(scene);
@@ -172,6 +175,28 @@ public static class ModuleSceneSetup {
         Volume volume = volumeObject.GetComponent<Volume>();
         volume.isGlobal = true;
         volume.sharedProfile = profile;
+    }
+
+
+    // small copy of the studio HDR for the reflections: the original's skybox import (512 px faces, 2 MB in the
+    // web build) stays untouched, the copy only costs ~0.1 MB
+    private static Cubemap ReflectionCubemap() {
+        if (AssetDatabase.LoadAssetAtPath<Cubemap>(ReflectionCubemapPath) == null) {
+            if (!AssetDatabase.IsValidFolder(TextureFolder)) AssetDatabase.CreateFolder(ModuleFolder, "Textures");
+            AssetDatabase.CopyAsset(StudioHdr, ReflectionCubemapPath);              // copies the import settings too
+        }
+
+        var importer = (TextureImporter)AssetImporter.GetAtPath(ReflectionCubemapPath);
+        TextureImporterPlatformSettings web = importer.GetPlatformTextureSettings("WebGL");
+        if (importer.maxTextureSize != ReflectionFaceSize || !web.overridden || web.maxTextureSize != ReflectionFaceSize) {
+            importer.textureShape = TextureImporterShape.TextureCube;
+            importer.maxTextureSize = ReflectionFaceSize;                           // default (editor and other platforms)
+            web.overridden = true;                                                  // the web build, explicitly
+            web.maxTextureSize = ReflectionFaceSize;
+            importer.SetPlatformTextureSettings(web);
+            importer.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<Cubemap>(ReflectionCubemapPath);
     }
 
 
