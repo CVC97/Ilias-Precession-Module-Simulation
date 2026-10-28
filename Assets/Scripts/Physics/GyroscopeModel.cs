@@ -6,6 +6,7 @@ public struct TopState {
     public double Phi;                                      // rad
     public double Psi;                                      // rad
     public double ThetaDot;                                 // rad/s
+    public double PPsi;                                     // kg·m²/s, conserved without friction
 
     // operator overloading
     public static TopState operator +(TopState a, TopState b) =>
@@ -14,6 +15,7 @@ public struct TopState {
             Phi = a.Phi + b.Phi,
             Psi = a.Psi + b.Psi,
             ThetaDot = a.ThetaDot + b.ThetaDot,
+            PPsi = a.PPsi + b.PPsi,
         };
 
     public static TopState operator *(TopState a, double t) =>
@@ -22,15 +24,19 @@ public struct TopState {
             Phi = a.Phi * t,
             Psi = a.Psi * t,
             ThetaDot = a.ThetaDot * t,
+            PPsi = a.PPsi * t,
         };
 }
 
 
 
 public class GyroscopeModel {
-    private readonly double m, g, l, i1, i3;                // set once in the constructor
-    private double pPhi, pPsi;                              // conserved momenta, from the initial conditions
+    private readonly double k, i1, i3;                      // set once in the constructor; k: torque constant, torque = k sinθ
+    private double pPhi;                                    // conserved momentum, from the initial conditions (and pushes)
     private TopState state;
+
+    // bearing friction between wheel and axle: torque −c ψ̇ on the wheel (N·m·s); 0 = no friction
+    public double FrictionCoeff { get; set; }
 
     // read-only properties
     public double Theta => state.Theta;
@@ -39,8 +45,11 @@ public class GyroscopeModel {
     public double ThetaDot => state.ThetaDot;
     public double PhiDot => CalcPhiDot(state);
     public double PsiDot => CalcPsiDot(state);
-    public double Omega3 => pPsi / i3;
+    public double Omega3 => state.PPsi / i3;
     public double Energy => CalcEnergy(state);
+    public double I1 => i1;
+    public double I3 => i3;
+    public double TorqueConst => k;
 
 
     // vector properties
@@ -58,16 +67,26 @@ public class GyroscopeModel {
 
     public Vec3d AngularVelocity => Vec3d.UnitZ*PhiDot + LineOfNodes*ThetaDot + AxisDirection*PsiDot;
     public Vec3d AngularMomentum => AxisDirection*i3*Omega3 + (AngularVelocity-AxisDirection*Omega3)*i1;
-    public Vec3d Torque => Vec3d.Cross(AxisDirection, Vec3d.UnitZ) * (-1)*m*g*l ;
+    public Vec3d Torque => Vec3d.Cross(AxisDirection, Vec3d.UnitZ) * (-1)*k ;
 
 
-    // constructor class
+    // constructor for the toy top: disk (mass, radius) on a massless axle, centre at distance leverArm from the pivot
     public GyroscopeModel(double mass, double leverArm, double radius, double gravity = 9.81) {
-        m = mass;                                           // mass
-        g = gravity;                                        // gravity 
-        l = leverArm;                                       // distance l between pivot and mass
-        i1 = 1.0/4*mass*Math.Pow(radius, 2) + mass*NPow(l, 2);
+        k = mass*gravity*leverArm;                          // torque constant m g l
+        i1 = 1.0/4*mass*Math.Pow(radius, 2) + mass*NPow(leverArm, 2);
         i3 = 1.0/2*mass*Math.Pow(radius, 2);
+    }
+
+    private GyroscopeModel(double i1, double i3, double torqueConst) {
+        this.i1 = i1;
+        this.i3 = i3;
+        k = torqueConst;
+    }
+
+    // any symmetric top with one fixed point, e.g. the lab gyroscope: moments of inertia about the pivot (i1, perpendicular
+    // to the figure axis) and about the figure axis (i3); torqueConst > 0 pulls the figure axis down (θ grows)
+    public static GyroscopeModel FromInertia(double i1, double i3, double torqueConst) {
+        return new GyroscopeModel(i1, i3, torqueConst);
     }
 
 
@@ -90,7 +109,7 @@ public class GyroscopeModel {
         double sinTheta = Math.Sin(theta);
         double cosTheta = Math.Cos(theta);
 
-        double phiDot = (pPhi - pPsi*cosTheta) / (i1*NPow(sinTheta, 2));
+        double phiDot = (pPhi - y.PPsi*cosTheta) / (i1*NPow(sinTheta, 2));
         return phiDot;
     }
 
@@ -99,7 +118,7 @@ public class GyroscopeModel {
         double cosTheta = Math.Cos(theta);
 
         double phiDot = CalcPhiDot(y);
-        double psiDot = Omega3 - phiDot*cosTheta;
+        double psiDot = y.PPsi/i3 - phiDot*cosTheta;
         return psiDot;
     }
 
@@ -107,21 +126,23 @@ public class GyroscopeModel {
         double theta = y.Theta;
         double sinTheta = Math.Sin(theta);
         double cosTheta = Math.Cos(theta);
+        double omega3 = y.PPsi/i3;
 
         double phiDot = CalcPhiDot(y);
-        double thetaDotDot = NPow(phiDot, 2)*sinTheta*cosTheta - i3/i1*Omega3*phiDot*sinTheta + m*g*l*sinTheta/i1;
+        double thetaDotDot = NPow(phiDot, 2)*sinTheta*cosTheta - i3/i1*omega3*phiDot*sinTheta + k*sinTheta/i1;
         return thetaDotDot;
     }
 
-    // helper function for the energy of the system state y 
+    // helper function for the energy of the system state y
     private double CalcEnergy(in TopState y) {
         // state of the system
         double theta = y.Theta;
         double thetaDot = y.ThetaDot;
         double phiDot = CalcPhiDot(y);
+        double omega3 = y.PPsi/i3;
         // calculate energy
-        double e_kin = (i1*(NPow(phiDot*Math.Sin(theta), 2) + NPow(thetaDot, 2)) + i3*NPow(Omega3, 2)) / 2;
-        double e_pot = m*g*l*Math.Cos(theta);
+        double e_kin = (i1*(NPow(phiDot*Math.Sin(theta), 2) + NPow(thetaDot, 2)) + i3*NPow(omega3, 2)) / 2;
+        double e_pot = k*Math.Cos(theta);
         return e_kin + e_pot;
     }
 
@@ -130,12 +151,40 @@ public class GyroscopeModel {
     public void SetInitialConditions(double theta0, double thetaDot0, double phiDot0, double omega3) {
         // calculating the conserved momenta pPhi and pPsi
         pPhi = i1 * NPow(Math.Sin(theta0), 2) * phiDot0 + i3 * Math.Cos(theta0) * omega3;
-        pPsi = i3 * omega3;
         // creating the initial state of the system
         state.Theta = theta0;
         state.Phi = 0;
         state.Psi = 0;
         state.ThetaDot = thetaDot0;
+        state.PPsi = i3 * omega3;
+    }
+
+
+    // push against the axle at the current state: changes θ̇ and φ̇ by the given amounts. The push acts perpendicular
+    // to the figure axis, so the spin ω3 (p_ψ) stays; p_φ changes because the push has a torque about the vertical.
+    public void Push(double deltaThetaDot, double deltaPhiDot) {
+        double phiDot = CalcPhiDot(state) + deltaPhiDot;
+        state.ThetaDot += deltaThetaDot;
+        pPhi = i1 * NPow(Math.Sin(state.Theta), 2) * phiDot + state.PPsi * Math.Cos(state.Theta);
+    }
+
+
+    // precession rate φ̇ at which θ stays constant (θ̈ = 0 with θ̇ = 0), for a guided start. θ̈ = 0 divided by sinθ gives
+    //   cosθ φ̇² − a φ̇ + b = 0,   a = I3 ω3 / I1,   b = k / I1.
+    // Of the two roots the slow one (→ b/a for a fast top) is wanted; written as 2b / (a + sign(a)·√D) it has no
+    // cancellation and also works at θ = 90° (cosθ = 0). NaN if there is no steady precession (spin too slow).
+    public double SteadyPrecessionRate(double theta, double omega3) {
+        double a = i3*omega3/i1;
+        double b = k/i1;
+        double discriminant = a*a - 4*Math.Cos(theta)*b;
+        if (discriminant < 0) {
+            return double.NaN;
+        }
+        double denominator = a + Math.Sign(a)*Math.Sqrt(discriminant);
+        if (denominator == 0) {
+            return double.NaN;
+        }
+        return 2*b / denominator;
     }
 
 
@@ -152,6 +201,8 @@ public class GyroscopeModel {
         f.Phi = phiDot;                                     // phiDot
         f.Psi = psiDot;                                     // psiDot
         f.ThetaDot = thetaDotDot;                           // thetaDotDot
+        // bearing friction is a generalized force on ψ only: dp_ψ/dt = −c ψ̇, p_φ stays conserved
+        f.PPsi = FrictionCoeff == 0 ? 0 : -FrictionCoeff*psiDot;
     }
 
 
@@ -171,7 +222,7 @@ public class GyroscopeModel {
     //     state.ThetaDot += a1.ThetaDot * dt + a1.ThetaDot * NPow(dt, 2) / 2;
 
     //     Derivatives(state, out TopState a2);
-        
+
     // }
 
 
@@ -193,6 +244,6 @@ public class GyroscopeModel {
         // calculation k4 = f(t+dt, y+k2) * dt and y_(i+1)
         Derivatives(support, out TopState k4);
         k4 *= dt;
-        state += (k1 + k2*2 + k3*2 + k4) * (1.0/6); 
+        state += (k1 + k2*2 + k3*2 + k4) * (1.0/6);
     }
 }

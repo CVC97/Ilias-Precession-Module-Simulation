@@ -1,7 +1,7 @@
 using UnityEngine;
 
 
-[RequireComponent(typeof(GyroscopeController))]
+// needs a controller on the same GameObject (GyroscopeController or ModuleGyroscopeController)
 public class VectorDisplay : MonoBehaviour {
     [Header("Arrows")]
     [SerializeField] private ArrowBase arrowL;
@@ -21,7 +21,7 @@ public class VectorDisplay : MonoBehaviour {
     [SerializeField] private float scaleOmega = 4e-4f;                      // m per rad/s
     [SerializeField] private float scaleD = 2.5f;                           // m per N·m
 
-    private GyroscopeController controller;
+    private IGyroscopeModelSource controller;
 
 
     // general function to show or hide vectors
@@ -35,7 +35,7 @@ public class VectorDisplay : MonoBehaviour {
 
 
     void Awake() {
-        controller = GetComponent<GyroscopeController>();
+        controller = GetComponent<IGyroscopeModelSource>();                 // GetComponent also finds components by interface
     }
 
 

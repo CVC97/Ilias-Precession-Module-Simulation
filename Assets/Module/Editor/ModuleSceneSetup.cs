@@ -11,6 +11,7 @@ using UnityEngine.SceneManagement;
 //   Module → Create module scene   copies the original scene once, removes what the module doesn't need, applies the look
 //   Module → Apply studio look     (re)applies materials, lights, fog, reflections and post-processing to the open module scene;
 //                                  overwrites manual changes to these, so tune the values here while we iterate
+//   Module → Use module controller  (step 2, once) swaps GyroscopeController for ModuleGyroscopeController
 // The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
@@ -22,6 +23,7 @@ public static class ModuleSceneSetup {
     private const string TextureFolder = "Assets/Module/Textures";
     private const string ReflectionCubemapPath = "Assets/Module/Textures/studio_reflection.hdr";
     private const int ReflectionFaceSize = 128;                                         // px per cube face; reflections only, never visible
+    private const string LabAssetPath = "Assets/Module/LabGyroscope.asset";
 
     // module colours (sRGB), from ../ilias-precession-module/frontend/src/styles.css
     private static readonly Color32 UniBlau1 = new Color32(21, 50, 104, 255);
@@ -71,6 +73,65 @@ public static class ModuleSceneSetup {
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("Studio look applied.");
+    }
+
+
+    [MenuItem("Module/Use module controller")]
+    private static void UseModuleController() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        GameObject gyroscope = FindInScene(scene, "Gyroscope").gameObject;
+        var oldController = gyroscope.GetComponent<GyroscopeController>();
+        if (oldController == null) {
+            EditorUtility.DisplayDialog("Module scene", "The gyroscope already uses ModuleGyroscopeController.", "OK");
+            return;
+        }
+
+        // the module scene gets its own copy of the gyroscope: from now on changes on either side don't reach the other
+        if (PrefabUtility.IsPartOfPrefabInstance(gyroscope)) {
+            PrefabUtility.UnpackPrefabInstance(gyroscope, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        }
+
+        // new controller with the old one's scene references; private [SerializeField] fields are set via SerializedObject
+        var oldSettings = new SerializedObject(oldController);
+        var controller = gyroscope.AddComponent<ModuleGyroscopeController>();
+        var settings = new SerializedObject(controller);
+        settings.FindProperty("lab").objectReferenceValue = LabAsset();
+        settings.FindProperty("rotor").objectReferenceValue = oldSettings.FindProperty("rotor").objectReferenceValue;
+        settings.FindProperty("trail").objectReferenceValue = oldSettings.FindProperty("trail").objectReferenceValue;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        Object.DestroyImmediate(oldController);
+
+        // arrow scales for the lab values (L ≈ 0.4 kg·m²/s, ω ≈ 40 rad/s, D ≈ 0.08 N·m); provisional until step 3
+        var vectors = new SerializedObject(gyroscope.GetComponent<VectorDisplay>());
+        vectors.FindProperty("scaleL").floatValue = 0.6f;
+        vectors.FindProperty("scaleOmega").floatValue = 0.005f;
+        vectors.FindProperty("scaleD").floatValue = 2f;
+        vectors.ApplyModifiedPropertiesWithoutUndo();
+
+        // the uGUI dev panel and the logging test of the original are wired to the old controller: off in the module
+        FindInScene(scene, "Canvas").gameObject.SetActive(false);
+        foreach (GameObject root in scene.GetRootGameObjects()) {
+            if (root.name == "ModelTest") root.SetActive(false);
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Selection.activeGameObject = gyroscope;
+        Debug.Log("Module scene uses ModuleGyroscopeController now.");
+    }
+
+
+    private static LabGyroscope LabAsset() {
+        var lab = AssetDatabase.LoadAssetAtPath<LabGyroscope>(LabAssetPath);
+        if (lab == null) {
+            lab = ScriptableObject.CreateInstance<LabGyroscope>();                  // with the default values from the class
+            AssetDatabase.CreateAsset(lab, LabAssetPath);
+        }
+        return lab;
     }
 
 

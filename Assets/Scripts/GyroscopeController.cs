@@ -1,7 +1,7 @@
 using UnityEngine;
 
 
-public class GyroscopeController : MonoBehaviour {
+public class GyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public enum Integrator { Euler, RK4 }                                       // shows up as a dropdown in the Inspector
 
     [Header("Gyroscope")]
