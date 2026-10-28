@@ -77,9 +77,9 @@ public static class ModuleSceneSetup {
         // materials: metal for the apparatus, lacquer in uni-blau-1 for the base, vectors in module colours
         // Lit(source, name, colour, metallic, smoothness, emission = fraction of the colour that glows)
         var remap = new Dictionary<Material, Material> {
-            [Original("Disk")] = Lit("Disk", "ModuleWheel", new Color32(200, 204, 210, 255), 0.9f, 0.6f),         // brushed aluminium
+            [Original("Disk")] = Lit("Disk", "ModuleWheel", new Color32(170, 175, 182, 255), 0.9f, 0.4f),         // brushed aluminium (rough: the flat face mirrors the spot otherwise)
             [Original("Marker")] = Lit("Marker", "ModuleMarker", new Color32(35, 38, 45, 255), 0f, 0.5f),          // dark stripe
-            [Original("Axle")] = Lit("Axle", "ModuleAxle", new Color32(215, 217, 220, 255), 1f, 0.85f),           // polished steel
+            [Original("Axle")] = Lit("Axle", "ModuleAxle", new Color32(215, 217, 220, 255), 1f, 0.7f),            // polished steel (not too glossy: glare at the pivot)
             [Original("Tower")] = Lit("Tower", "ModuleTower", new Color32(185, 190, 196, 255), 0.9f, 0.5f),        // satin aluminium
             [Original("Base")] = Lit("Base", "ModuleBase", UniBlau1, 0.2f, 0.75f),                                 // blue lacquer
             [Original("Floor")] = Lit("Floor", "ModuleFloor", new Color32(232, 235, 240, 255), 0f, 0.3f),
@@ -138,7 +138,8 @@ public static class ModuleSceneSetup {
     }
 
 
-    // gentle post-processing: neutral tonemapping (keeps the module colours), faint bloom on highlights, soft blue vignette
+    // gentle post-processing: neutral tonemapping (keeps the module colours), more contrast, faint bloom on highlights,
+    // soft blue vignette
     private static void ApplyPostProcessing(Scene scene) {
         AssetDatabase.DeleteAsset(VolumeProfilePath);                               // rebuilt from scratch on every run
         VolumeProfile profile = ScriptableObject.CreateInstance<VolumeProfile>();
@@ -147,14 +148,18 @@ public static class ModuleSceneSetup {
         Tonemapping tonemapping = AddOverride<Tonemapping>(profile);
         tonemapping.mode.Override(TonemappingMode.Neutral);
 
+        ColorAdjustments colorAdjustments = AddOverride<ColorAdjustments>(profile);
+        colorAdjustments.contrast.Override(20f);                                    // -100 … 100
+        colorAdjustments.postExposure.Override(-0.2f);                              // in stops; keeps the brighter whites from clipping
+
         Bloom bloom = AddOverride<Bloom>(profile);
         bloom.threshold.Override(1.2f);
-        bloom.intensity.Override(0.3f);
+        bloom.intensity.Override(0.2f);
         bloom.scatter.Override(0.6f);
 
         Vignette vignette = AddOverride<Vignette>(profile);
         vignette.color.Override((Color)UniBlau1);
-        vignette.intensity.Override(0.2f);
+        vignette.intensity.Override(0.25f);
         vignette.smoothness.Override(0.6f);
         AssetDatabase.SaveAssets();
 
