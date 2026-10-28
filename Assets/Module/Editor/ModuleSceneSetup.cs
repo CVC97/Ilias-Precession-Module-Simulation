@@ -7,22 +7,26 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 
-// Step 1 of the module version: copies the original scene and gives the copy the neutral module look.
-// Menu: Module → Create module scene. The original scene and its materials are not touched.
-// To redo it: delete Assets/Module/ModuleScene.unity and run it again (existing module materials are kept).
+// Module version, step 1: the scene copy and its look. The original scene and its materials are not touched.
+//   Module → Create module scene   copies the original scene once, removes what the module doesn't need, applies the look
+//   Module → Apply studio look     (re)applies materials, lights, fog, reflections and post-processing to the open module scene;
+//                                  overwrites manual changes to these, so tune the values here while we iterate
+// The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
     private const string ModuleFolder = "Assets/Module";
     private const string MaterialFolder = "Assets/Module/Materials";
     private const string ModuleScenePath = "Assets/Module/ModuleScene.unity";
+    private const string VolumeProfilePath = "Assets/Module/ModuleVolumeProfile.asset";
+    private const string StudioCubemap = "Assets/Textures/studio_small_09_2k.hdr";     // only for reflections, never visible
 
     // module colours (sRGB), from ../ilias-precession-module/frontend/src/styles.css
-    private static readonly Color32 PageBackground = new Color32(240, 242, 245, 255);  // #f0f2f5
     private static readonly Color32 UniBlau1 = new Color32(21, 50, 104, 255);
-    private static readonly Color32 Grau20 = new Color32(217, 218, 218, 255);
-    private static readonly Color32 ColorL = new Color32(199, 13, 45, 255);            // red
-    private static readonly Color32 ColorOmega = new Color32(0, 145, 200, 255);        // uni-blau-3
-    private static readonly Color32 ColorD = new Color32(253, 166, 66, 255);           // yellow-orange
+    private static readonly Color32 UniBlau3 = new Color32(0, 145, 200, 255);
+    private static readonly Color32 YellowOrange = new Color32(253, 166, 66, 255);
+
+    // stage: background = fog colour, so the floor fades into it from every camera angle
+    private static readonly Color32 StageColor = new Color32(222, 227, 233, 255);
 
 
     [MenuItem("Module/Create module scene")]
@@ -36,55 +40,147 @@ public static class ModuleSceneSetup {
         }
 
         if (!AssetDatabase.IsValidFolder(ModuleFolder)) AssetDatabase.CreateFolder("Assets", "Module");
-        if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder(ModuleFolder, "Materials");
         AssetDatabase.CopyAsset(SourceScene, ModuleScenePath);                      // the copy gets a new GUID
-
-        // original material → matte module copy
-        var remap = new Dictionary<Material, Material> {
-            [Original("Disk")] = MatteCopy("Disk", "ModuleWheel", new Color32(200, 202, 205, 255), 0.3f),
-            [Original("Marker")] = MatteCopy("Marker", "ModuleMarker", UniBlau1, 0.2f),
-            [Original("Axle")] = MatteCopy("Axle", "ModuleAxle", new Color32(150, 153, 158, 255), 0.3f),
-            [Original("Tower")] = MatteCopy("Tower", "ModuleTower", new Color32(120, 124, 130, 255), 0.2f),
-            [Original("Base")] = MatteCopy("Base", "ModuleBase", UniBlau1, 0.2f),
-            [Original("Floor")] = MatteCopy("Floor", "ModuleFloor", Grau20, 0.05f),
-            [Original("ArrowL")] = MatteCopy("ArrowL", "ModuleArrowL", ColorL, 0.15f),
-            [Original("ArrowOmega")] = MatteCopy("ArrowOmega", "ModuleArrowOmega", ColorOmega, 0.15f),
-            [Original("ArrowD")] = MatteCopy("ArrowD", "ModuleArrowD", ColorD, 0.15f),
-            [Original("TrailWhite")] = TintedCopy("TrailWhite", "ModuleTrail", UniBlau1),
-        };
-        AssetDatabase.SaveAssets();
-
         Scene scene = EditorSceneManager.OpenScene(ModuleScenePath, OpenSceneMode.Single);
 
-        // remove what the module doesn't need
+        // remove what the module doesn't need (the old post-processing volume belongs to the original scene)
         foreach (string path in new[] { "Snow", "Snow (fast)", "Global Volume", "ConeTest", "Canvas/ControlPanel/Schnee" }) {
             Transform t = FindInScene(scene, path);
             if (t != null) Object.DestroyImmediate(t.gameObject);
         }
-
-        // background: solid page colour instead of the HDR skybox, no post-processing (no bloom, vignette, tonemapping)
-        Camera cam = FindInScene(scene, "Main Camera").GetComponent<Camera>();
-        cam.clearFlags = CameraClearFlags.SolidColor;
-        cam.backgroundColor = PageBackground;
-        cam.GetUniversalAdditionalCameraData().renderPostProcessing = false;
-
-        // soft light: bright ambient from three directions, one directional key light with soft shadows, no rim light
-        RenderSettings.skybox = null;
-        RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = new Color32(235, 238, 243, 255);
-        RenderSettings.ambientEquatorColor = new Color32(205, 209, 215, 255);
-        RenderSettings.ambientGroundColor = new Color32(160, 162, 166, 255);
         Lightmapping.lightingDataAsset = null;                                      // don't share the original's baked lighting
 
-        Light key = FindInScene(scene, "KeyLight").GetComponent<Light>();
-        key.type = LightType.Directional;                                           // was a spot (light cone on the floor)
-        key.color = Color.white;
-        key.intensity = 1.2f;
-        key.shadows = LightShadows.Soft;
-        key.shadowStrength = 0.4f;
-        FindInScene(scene, "Main Camera/RimLight").gameObject.SetActive(false);
+        ApplyLook(scene);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log($"Module scene created: {ModuleScenePath}");
+    }
 
-        // swap the materials on every renderer (incl. inactive ones and those inside prefab instances)
+
+    [MenuItem("Module/Apply studio look")]
+    private static void ApplyStudioLook() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        ApplyLook(scene);
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Studio look applied.");
+    }
+
+
+    private static void ApplyLook(Scene scene) {
+        if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder(ModuleFolder, "Materials");
+
+        // materials: metal for the apparatus, lacquer in uni-blau-1 for the base, vectors in module colours
+        // Lit(source, name, colour, metallic, smoothness, emission = fraction of the colour that glows)
+        var remap = new Dictionary<Material, Material> {
+            [Original("Disk")] = Lit("Disk", "ModuleWheel", new Color32(200, 204, 210, 255), 0.9f, 0.6f),         // brushed aluminium
+            [Original("Marker")] = Lit("Marker", "ModuleMarker", new Color32(35, 38, 45, 255), 0f, 0.5f),          // dark stripe
+            [Original("Axle")] = Lit("Axle", "ModuleAxle", new Color32(215, 217, 220, 255), 1f, 0.85f),           // polished steel
+            [Original("Tower")] = Lit("Tower", "ModuleTower", new Color32(185, 190, 196, 255), 0.9f, 0.5f),        // satin aluminium
+            [Original("Base")] = Lit("Base", "ModuleBase", UniBlau1, 0.2f, 0.75f),                                 // blue lacquer
+            [Original("Floor")] = Lit("Floor", "ModuleFloor", new Color32(232, 235, 240, 255), 0f, 0.3f),
+            [Original("ArrowOmega")] = Lit("ArrowOmega", "ModuleArrowOmega", UniBlau1, 0f, 0.6f, 0.25f),
+            [Original("ArrowL")] = Lit("ArrowL", "ModuleArrowL", UniBlau3, 0f, 0.6f, 0.25f),
+            [Original("ArrowD")] = Lit("ArrowD", "ModuleArrowD", YellowOrange, 0f, 0.6f, 0.25f),
+            [Original("TrailWhite")] = Tinted("TrailWhite", "ModuleTrail", new Color32(90, 98, 110, 255)),
+        };
+        AssetDatabase.SaveAssets();
+        SwapMaterials(scene, remap);
+
+        // stage: large floor that fades into the background through fog of the same colour
+        FindInScene(scene, "Floor").localScale = new Vector3(30f, 0.001f, 30f);
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = FogMode.Linear;
+        RenderSettings.fogColor = StageColor;
+        RenderSettings.fogStartDistance = 1.6f;                                     // beyond the camera's max distance (1.35 m)
+        RenderSettings.fogEndDistance = 5f;
+
+        Camera cam = FindInScene(scene, "Main Camera").GetComponent<Camera>();
+        cam.clearFlags = CameraClearFlags.SolidColor;
+        cam.backgroundColor = StageColor;
+        cam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+
+        // light: soft spot from above (gentler than the original), rim light from behind for edge highlights
+        Vector3 pivot = FindInScene(scene, "Gyroscope").position;
+        Light key = FindInScene(scene, "KeyLight").GetComponent<Light>();
+        key.type = LightType.Spot;
+        key.transform.position = pivot + new Vector3(0.35f, 1.0f, -0.35f);
+        key.transform.LookAt(pivot);
+        key.color = new Color32(255, 246, 234, 255);                                // slightly warm
+        key.intensity = 5f;
+        key.range = 4f;
+        key.spotAngle = 70f;                                                        // wide cone, soft edge
+        key.innerSpotAngle = 30f;
+        key.shadows = LightShadows.Soft;
+        key.shadowStrength = 0.65f;
+
+        Transform rim = FindInScene(scene, "Main Camera/RimLight");
+        rim.gameObject.SetActive(true);
+        Light rimLight = rim.GetComponent<Light>();
+        rimLight.color = new Color32(230, 238, 255, 255);                           // slightly cool
+        rimLight.intensity = 0.8f;
+
+        // ambient from three directions; reflections from the studio HDR (gives the metal its softbox highlights)
+        RenderSettings.skybox = null;
+        RenderSettings.ambientMode = AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor = new Color32(190, 197, 208, 255);
+        RenderSettings.ambientEquatorColor = new Color32(165, 172, 182, 255);
+        RenderSettings.ambientGroundColor = new Color32(110, 114, 120, 255);
+        RenderSettings.defaultReflectionMode = DefaultReflectionMode.Custom;
+        RenderSettings.customReflectionTexture = AssetDatabase.LoadAssetAtPath<Cubemap>(StudioCubemap);
+        RenderSettings.reflectionIntensity = 0.9f;
+
+        ApplyPostProcessing(scene);
+    }
+
+
+    // gentle post-processing: neutral tonemapping (keeps the module colours), faint bloom on highlights, soft blue vignette
+    private static void ApplyPostProcessing(Scene scene) {
+        AssetDatabase.DeleteAsset(VolumeProfilePath);                               // rebuilt from scratch on every run
+        VolumeProfile profile = ScriptableObject.CreateInstance<VolumeProfile>();
+        AssetDatabase.CreateAsset(profile, VolumeProfilePath);
+
+        Tonemapping tonemapping = AddOverride<Tonemapping>(profile);
+        tonemapping.mode.Override(TonemappingMode.Neutral);
+
+        Bloom bloom = AddOverride<Bloom>(profile);
+        bloom.threshold.Override(1.2f);
+        bloom.intensity.Override(0.3f);
+        bloom.scatter.Override(0.6f);
+
+        Vignette vignette = AddOverride<Vignette>(profile);
+        vignette.color.Override((Color)UniBlau1);
+        vignette.intensity.Override(0.2f);
+        vignette.smoothness.Override(0.6f);
+        AssetDatabase.SaveAssets();
+
+        Transform volumeObject = FindInScene(scene, "Module Volume");
+        if (volumeObject == null) {
+            var go = new GameObject("Module Volume", typeof(Volume));
+            SceneManager.MoveGameObjectToScene(go, scene);
+            volumeObject = go.transform;
+        }
+        Volume volume = volumeObject.GetComponent<Volume>();
+        volume.isGlobal = true;
+        volume.sharedProfile = profile;
+    }
+
+
+    // volume components are sub-assets of the profile file
+    private static T AddOverride<T>(VolumeProfile profile) where T : VolumeComponent {
+        T component = profile.Add<T>();
+        component.name = typeof(T).Name;
+        AssetDatabase.AddObjectToAsset(component, profile);
+        return component;
+    }
+
+
+    // swap the materials on every renderer (incl. inactive ones and those inside prefab instances)
+    private static void SwapMaterials(Scene scene, Dictionary<Material, Material> remap) {
         foreach (GameObject root in scene.GetRootGameObjects()) {
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) {
                 Material[] mats = r.sharedMaterials;
@@ -95,10 +191,6 @@ public static class ModuleSceneSetup {
                 PrefabUtility.RecordPrefabInstancePropertyModifications(r);         // keep the change as a scene override
             }
         }
-
-        EditorSceneManager.MarkSceneDirty(scene);
-        EditorSceneManager.SaveScene(scene);
-        Debug.Log($"Module scene created: {ModuleScenePath}");
     }
 
 
@@ -107,38 +199,41 @@ public static class ModuleSceneSetup {
     }
 
 
-    // copy of an original material (keeps shader and keywords); an existing copy is reused, so tweaks survive a rerun
-    private static Material CopyOf(string source, string name, out bool isNew) {
+    // module copy of an original material (keeps shader and keywords); created once, then reused
+    private static Material CopyOf(string source, string name) {
         string path = $"{MaterialFolder}/{name}.mat";
-        isNew = AssetDatabase.LoadAssetAtPath<Material>(path) == null;
-        if (isNew) AssetDatabase.CopyAsset($"Assets/Materials/{source}.mat", path);
+        if (AssetDatabase.LoadAssetAtPath<Material>(path) == null) {
+            AssetDatabase.CopyAsset($"Assets/Materials/{source}.mat", path);
+        }
         return AssetDatabase.LoadAssetAtPath<Material>(path);
     }
 
 
-    // URP/Lit: colour, not metallic, low smoothness, no emission
-    private static Material MatteCopy(string source, string name, Color color, float smoothness) {
-        Material mat = CopyOf(source, name, out bool isNew);
-        if (isNew) {
-            mat.SetColor("_BaseColor", color);
-            mat.SetFloat("_Metallic", 0f);
-            mat.SetFloat("_Smoothness", smoothness);
+    // URP/Lit
+    private static Material Lit(string source, string name, Color color, float metallic, float smoothness, float emission = 0f) {
+        Material mat = CopyOf(source, name);
+        mat.SetColor("_BaseColor", color);
+        mat.SetFloat("_Metallic", metallic);
+        mat.SetFloat("_Smoothness", smoothness);
+        if (emission > 0f) {
+            mat.SetColor("_EmissionColor", color * emission);                       // keeps the vector colour readable on the shadow side
+            mat.EnableKeyword("_EMISSION");
+            mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+        } else {
             mat.SetColor("_EmissionColor", Color.black);
             mat.DisableKeyword("_EMISSION");
             mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
-            EditorUtility.SetDirty(mat);
         }
+        EditorUtility.SetDirty(mat);
         return mat;
     }
 
 
     // unlit/particle materials (trail): only the colour
-    private static Material TintedCopy(string source, string name, Color color) {
-        Material mat = CopyOf(source, name, out bool isNew);
-        if (isNew) {
-            mat.SetColor("_BaseColor", color);
-            EditorUtility.SetDirty(mat);
-        }
+    private static Material Tinted(string source, string name, Color color) {
+        Material mat = CopyOf(source, name);
+        mat.SetColor("_BaseColor", color);
+        EditorUtility.SetDirty(mat);
         return mat;
     }
 
