@@ -12,4 +12,7 @@ public abstract class ApparatusParameters : ScriptableObject {
 
     // sign of ω3 for which L points from the pivot through the wheel (textbook picture)
     public abstract int SpinSign { get; }
+
+    // realistic upper spin rate; the arrows are scaled for this range (the controller clamps to it)
+    public abstract float MaxRpm { get; }
 }

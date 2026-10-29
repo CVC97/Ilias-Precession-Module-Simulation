@@ -10,6 +10,10 @@ public class VectorArrow3D : ArrowBase {
 
     private MeshRenderer shaftRenderer, headRenderer;
 
+    // last drawn state, e.g. for a label at the tip
+    public Vector3 Tip { get; private set; }
+    public bool Visible { get; private set; }
+
     void Awake() {
         // get the MeshRenderer of shaft and head (GetComponent on shaft/head)
         shaftRenderer = shaft.GetComponent<MeshRenderer>();
@@ -24,10 +28,13 @@ public class VectorArrow3D : ArrowBase {
         if (length < 1e-5f) {
             shaftRenderer.enabled = false;
             headRenderer.enabled = false;
+            Visible = false;
             return;
         }
         shaftRenderer.enabled = true;
         headRenderer.enabled = true;
+        Visible = true;
+        Tip = origin + vector;
 
         Vector3 dir = vector / length;
         float hl = Mathf.Min(headLength, 0.5f * length);                                    // reduce head length for short vectors

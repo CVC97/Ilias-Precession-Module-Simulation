@@ -18,7 +18,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     [Header("Experiment")]
     [SerializeField, Range(0f, 3000f)] private float rpm = 400f;                // Drehzahl of the wheel
     [SerializeField, Range(0f, 60f)] private float addOnMassGrams = 30f;        // Zusatzgewicht (lab only)
-    [SerializeField, Range(10f, 120f)] private float theta0Deg = 90f;           // Neigung θ₀; clamped to the apparatus' limits
+    [SerializeField, Range(10f, 120f)] private float theta0Deg = 90f;           // Neigung θ₀ of L⃗ (see Theta); clamped to the apparatus' limits
     [SerializeField] private StartMode startMode = StartMode.Guided;
     [SerializeField] private bool friction = false;                             // Reibung
 
@@ -50,11 +50,18 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public bool SpinDisplayLimited { get; private set; }
 
     public Apparatus SelectedApparatus => apparatus;                            // "Apparatus" is taken by the enum
+    public ApparatusRig ActiveRig => Rig;
     public float Rpm => rpm;
     public float AddOnMassGrams => addOnMassGrams;
     public float Theta0Deg => theta0Deg;
     public StartMode SelectedStartMode => startMode;
     public bool Friction => friction;
+
+    // θ as the page and the Inspector use it: angle between L⃗ (wheel side) and the vertical, as in the module text
+    // (dφ = dL/(L sin θ)). The model's figure axis points to the side where the torque acts, on the lab gyroscope the
+    // counterweight end, so there θ = π − θ_model. The map is its own inverse: it converts in both directions.
+    public double Theta => ThetaOfL(gyroscope.Theta);
+    private double ThetaOfL(double theta) => Rig.Parameters.SpinSign < 0 ? Math.PI - theta : theta;
 
     // readouts as magnitudes (the signs only encode the spin sense)
     public double OmegaR => Math.Abs(gyroscope.PsiDot);                         // what the light barrier sees: wheel against axle
@@ -119,8 +126,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         gyroscope.FrictionCoeff = friction ? p.FrictionCoeff : 0;
 
         // spin sense chosen so that L points from the pivot through the wheel
-        double omega3 = p.SpinSign * rpm * 2*Math.PI / 60;
-        double theta0 = Mathf.Clamp(theta0Deg, rig.MinTheta0Deg, rig.MaxTheta0Deg) * Math.PI / 180;
+        double omega3 = p.SpinSign * Mathf.Min(rpm, p.MaxRpm) * 2*Math.PI / 60;
+        double theta0 = ThetaOfL(Mathf.Clamp(theta0Deg, rig.MinTheta0Deg, rig.MaxTheta0Deg) * Math.PI / 180);   // → model
         double phiDot0 = 0;                                                     // released: the axle starts at rest
         if (startMode == StartMode.Guided) {
             phiDot0 = gyroscope.SteadyPrecessionRate(theta0, omega3);           // guided by hand into steady precession
@@ -175,7 +182,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
         omegaR = (float)OmegaR;
         omegaP = (float)OmegaP;
-        thetaDeg = (float)(gyroscope.Theta * 180 / Math.PI);
+        thetaDeg = (float)(Theta * 180 / Math.PI);
         energyError = (float)EnergyError;
     }
 

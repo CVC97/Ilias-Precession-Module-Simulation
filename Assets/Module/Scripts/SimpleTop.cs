@@ -15,6 +15,9 @@ public class SimpleTop : ApparatusParameters {
     [Header("Bearing friction (when switched on)")]
     [SerializeField] private float spinDecayTime = 120f;                    // s
 
+    [Header("Spin")]
+    [SerializeField] private float maxRpm = 3000f;
+
     [SerializeField] private float gravity = 9.81f;                         // m/s²
 
 
@@ -33,4 +36,6 @@ public class SimpleTop : ApparatusParameters {
 
     // the disk sits on the positive side of the figure axis
     public override int SpinSign => 1;
+
+    public override float MaxRpm => maxRpm;
 }

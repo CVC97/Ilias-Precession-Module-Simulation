@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -14,6 +15,9 @@ using UnityEngine.SceneManagement;
 //   Module → Use module controller  (step 2, once) swaps GyroscopeController for ModuleGyroscopeController
 //   Module → Build lab gyroscope    (step 3, once) replaces the toy top by the lab apparatus (dimensions from LabGyroscope)
 //   Module → Add simple top         (step 3b, once) second apparatus in the same build (dimensions from SimpleTop)
+//   Module → Add helpers            (step 4a, once) labels, axes, ω_P arc, switchboard ModuleHelpers
+//   Module → Add precession vector  (step 4a, once) ω⃗_P on the vertical axis, centred on the arc
+//   Module → Add precession cone    (step 4a, rerunnable) cone swept by the figure axis, ω_P label; arc and vector off by default
 // The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
@@ -34,6 +38,8 @@ public static class ModuleSceneSetup {
     private static readonly Color32 UniBlau1 = new Color32(21, 50, 104, 255);
     private static readonly Color32 UniBlau3 = new Color32(0, 145, 200, 255);
     private static readonly Color32 YellowOrange = new Color32(253, 166, 66, 255);
+    private static readonly Color32 JuraRot = new Color32(199, 13, 45, 255);           // ω_P
+    private static readonly Color32 Graphite = new Color32(70, 75, 85, 255);           // axes
 
     // stage: background = fog colour, so the floor fades into it from every camera angle
     private static readonly Color32 StageColor = new Color32(222, 227, 233, 255);
@@ -305,6 +311,315 @@ public static class ModuleSceneSetup {
     }
 
 
+    // step 4a: labels at the arrow tips, dashed axes, the ω_P arc, and the switchboard (ModuleHelpers) for all helpers
+    [MenuItem("Module/Add helpers")]
+    private static void AddHelpers() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        if (FindInScene(scene, "Helpers") != null) {
+            EditorUtility.DisplayDialog("Module scene", "The helpers are already added.", "OK");
+            return;
+        }
+        Transform gyroscope = FindInScene(scene, "Gyroscope");
+        var controller = gyroscope.GetComponent<ModuleGyroscopeController>();
+        if (controller == null || gyroscope.Find("TopRig") == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run the earlier Module steps first (up to Add simple top).", "OK");
+            return;
+        }
+        Vector3 pivot = gyroscope.position;
+        var helpers = new GameObject("Helpers").transform;                     // at the origin, never rotates
+        Material labelMaterial = LabelOverlayMaterial();
+        Material lineMaterial = DashedLineMaterial();
+        Material precessionMaterial = Unlit("ArrowD", "ModulePrecession", JuraRot);
+
+        // symbols at the arrow tips, written like in the module (\vec{L}, \vec{\omega}, \vec{D})
+        Transform labels = Empty("Labels", helpers, Vector3.zero);
+        Transform arrows = gyroscope.Find("Vectors");
+        foreach (var (arrow, symbol, arrowHeightEm, color) in new[] {
+                     ("Arrow3DL", "L", 0.78f, (Color)UniBlau3),
+                     ("Arrow3DOmega", "ω", 0.6f, (Color)UniBlau1),
+                     ("Arrow3DD", "D", 0.78f, (Color)YellowOrange) }) {
+            TextMeshPro label = Label(labels, "Label" + arrow.Substring(7), VectorSymbol(symbol, arrowHeightEm), color, labelMaterial);
+            SetReference(label.gameObject.AddComponent<VectorLabel>(), "arrow", arrows.Find(arrow).GetComponent<VectorArrow3D>());
+        }
+
+        // axes as thin dashed lines: the figure axis turns with the gyroscope, the vertical axis stays
+        Transform figureAxis = Empty("FigureAxis", gyroscope, Vector3.zero);
+        DashedLine(figureAxis, new Vector3(0f, -0.30f, 0f), new Vector3(0f, 0.42f, 0f), lineMaterial);
+        Transform verticalAxis = Empty("VerticalAxis", helpers, pivot);
+        DashedLine(verticalAxis, new Vector3(0f, -0.05f, 0f), new Vector3(0f, 0.34f, 0f), lineMaterial);
+
+        // ω_P: curved arrow around the vertical axis, 0.30 m above the pivot
+        Transform arcRoot = Empty("PrecessionArc", helpers, pivot + new Vector3(0f, 0.30f, 0f));
+        var line = arcRoot.gameObject.AddComponent<LineRenderer>();
+        line.useWorldSpace = false;
+        line.sharedMaterial = precessionMaterial;
+        line.widthMultiplier = 0.006f;
+        line.numCapVertices = 4;
+        line.alignment = LineAlignment.View;
+        line.shadowCastingMode = ShadowCastingMode.Off;
+        line.receiveShadows = false;
+        Transform head = Empty("Head", arcRoot, Vector3.zero);
+        head.localScale = new Vector3(0.020f, 0.038f, 0.020f);                  // like the vector arrow heads
+        head.gameObject.AddComponent<ConeMesh>();                               // unit cone, also adds MeshFilter/MeshRenderer
+        var headRenderer = head.GetComponent<MeshRenderer>();
+        headRenderer.sharedMaterial = precessionMaterial;
+        headRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        headRenderer.receiveShadows = false;
+        TextMeshPro arcLabel = Label(arcRoot, "Label", "<i>ω</i><sub><i>P</i></sub>", JuraRot, labelMaterial);
+        var arc = new SerializedObject(arcRoot.gameObject.AddComponent<PrecessionArc>());
+        arc.FindProperty("controller").objectReferenceValue = controller;
+        arc.FindProperty("arc").objectReferenceValue = line;
+        arc.FindProperty("head").objectReferenceValue = head;
+        arc.FindProperty("label").objectReferenceValue = arcLabel;
+        arc.ApplyModifiedPropertiesWithoutUndo();
+
+        // switchboard
+        var board = new SerializedObject(helpers.gameObject.AddComponent<ModuleHelpers>());
+        board.FindProperty("controller").objectReferenceValue = controller;
+        board.FindProperty("vectors").objectReferenceValue = gyroscope.GetComponent<VectorDisplay>();
+        board.FindProperty("labels").objectReferenceValue = labels.gameObject;
+        board.FindProperty("figureAxis").objectReferenceValue = figureAxis.gameObject;
+        board.FindProperty("verticalAxis").objectReferenceValue = verticalAxis.gameObject;
+        board.FindProperty("precessionArc").objectReferenceValue = arcRoot.gameObject;
+        board.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Selection.activeGameObject = helpers.gameObject;
+        Debug.Log("Helpers added.");
+    }
+
+
+    // step 4a, addition: ω⃗_P as a vector on the vertical axis, centred on the curved arrow (the arc loses its own label)
+    [MenuItem("Module/Add precession vector")]
+    private static void AddPrecessionVector() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        Transform helpers = FindInScene(scene, "Helpers");
+        Transform arrows = FindInScene(scene, "Gyroscope/Vectors");
+        if (helpers == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run Module → Add helpers first.", "OK");
+            return;
+        }
+        if (arrows.Find("Arrow3DOmegaP") != null) {
+            EditorUtility.DisplayDialog("Module scene", "The precession vector is already added.", "OK");
+            return;
+        }
+        var controller = FindInScene(scene, "Gyroscope").GetComponent<ModuleGyroscopeController>();
+        Material precessionMaterial = Unlit("ArrowD", "ModulePrecession", JuraRot);
+
+        // a copy of the D arrow (same sizes, no shadows), in jura-rot
+        GameObject arrow = Object.Instantiate(arrows.Find("Arrow3DD").gameObject, arrows);
+        arrow.name = "Arrow3DOmegaP";
+        foreach (MeshRenderer r in arrow.GetComponentsInChildren<MeshRenderer>(true)) {
+            r.sharedMaterial = precessionMaterial;
+        }
+        SetReference(arrow.AddComponent<PrecessionVector>(), "controller", controller);
+
+        TextMeshPro label = Label(helpers.Find("Labels"), "LabelOmegaP", VectorSymbol("ω", 0.6f) + "<sub><i>P</i></sub>",
+                                  JuraRot, LabelOverlayMaterial());
+        SetReference(label.gameObject.AddComponent<VectorLabel>(), "arrow", arrow.GetComponent<VectorArrow3D>());
+
+        // the arc keeps only the sense of rotation
+        Transform arcRoot = helpers.Find("PrecessionArc");
+        Transform arcLabel = arcRoot.Find("Label");
+        if (arcLabel != null) Object.DestroyImmediate(arcLabel.gameObject);
+        SetReference(arcRoot.GetComponent<PrecessionArc>(), "label", null);
+
+        SetReference(helpers.GetComponent<ModuleHelpers>(), "precessionVector", arrow);
+
+        ApplyLook(scene);                                                       // label style, scales per apparatus
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Precession vector added.");
+    }
+
+
+    // step 4a, addition: precession as the cone the figure axis sweeps around the vertical (faint jura-rot surface that
+    // fades out towards θ = 90°, rim line through the axle end, ω_P label). Arc and vector stay as switchboard toggles,
+    // off by default. The grey trail of the axle end is not touched.
+    // Rerunnable: removes earlier versions (floating-dot tail, cone of L⃗ with its tail) and builds the cone anew.
+    [MenuItem("Module/Add precession cone")]
+    private static void AddPrecessionCone() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        Transform helpers = FindInScene(scene, "Helpers");
+        if (helpers == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run Module → Add helpers first.", "OK");
+            return;
+        }
+        foreach (string old in new[] { "PrecessionTail", "Precession", "Labels/LabelPrecession" }) {
+            Transform t = helpers.Find(old);
+            if (t != null) Object.DestroyImmediate(t.gameObject);
+        }
+
+        Transform gyroscope = FindInScene(scene, "Gyroscope");
+        Transform root = Empty("Precession", helpers, Vector3.zero);
+        Material lineMaterial = Unlit("ArrowD", "ModulePrecession", JuraRot);
+
+        // cone: faint double-sided surface, rim as a thin line (on a child: one renderer per object)
+        var coneObject = new GameObject("Cone");
+        coneObject.transform.SetParent(root, false);
+        HelperCone cone = coneObject.AddComponent<HelperCone>();                // also adds MeshFilter and MeshRenderer
+        var surface = coneObject.GetComponent<MeshRenderer>();
+        surface.sharedMaterial = TransparentUnlit("ModulePrecessionCone", new Color32(199, 13, 45, 30));
+        surface.shadowCastingMode = ShadowCastingMode.Off;
+        surface.receiveShadows = false;
+        Transform rimObject = Empty("Rim", coneObject.transform, Vector3.zero);
+        var rim = rimObject.gameObject.AddComponent<LineRenderer>();
+        rim.positionCount = 0;                                                  // HelperCone fills it at runtime
+        rim.sharedMaterial = lineMaterial;
+        rim.widthMultiplier = 0.003f;
+        rim.alignment = LineAlignment.View;
+        rim.shadowCastingMode = ShadowCastingMode.Off;
+        rim.receiveShadows = false;
+        SetReference(cone, "rim", rim);
+
+        // label with the other labels (hidden with them), placed by PrecessionDisplay
+        TextMeshPro label = Label(helpers.Find("Labels"), "LabelPrecession", "<i>ω</i><sub><i>P</i></sub>", JuraRot,
+                                  LabelOverlayMaterial());
+
+        var script = new SerializedObject(root.gameObject.AddComponent<PrecessionDisplay>());
+        script.FindProperty("controller").objectReferenceValue = gyroscope.GetComponent<ModuleGyroscopeController>();
+        script.FindProperty("cone").objectReferenceValue = cone;
+        script.FindProperty("label").objectReferenceValue = label;
+        script.ApplyModifiedPropertiesWithoutUndo();
+
+        SetReference(helpers.GetComponent<ModuleHelpers>(), "precessionCone", coneObject);
+
+        ApplyLook(scene);                                                       // label style
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Precession cone added.");
+    }
+
+
+    // URP/Unlit, transparent (alpha from the colour), both faces: for the helper cones
+    private static Material TransparentUnlit(string name, Color color) {
+        string path = $"{MaterialFolder}/{name}.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null) {
+            mat = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { name = name };
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        mat.SetFloat("_Surface", 1f);                                           // the shader GUI's properties, plus what it would set
+        mat.SetFloat("_Blend", 0f);                                             // alpha
+        mat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        mat.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+        mat.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_ZWrite", 0f);                                            // the arrows inside stay visible
+        mat.SetFloat("_Cull", (float)CullMode.Off);
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.SetOverrideTag("RenderType", "Transparent");
+        mat.renderQueue = (int)RenderQueue.Transparent;
+        mat.SetColor("_BaseColor", color);
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+
+    // symbol with a small arrow above, via TextMeshPro rich text: step back over the letter, raise a small "→"
+    private static string VectorSymbol(string symbol, float arrowHeightEm) {
+        return $"<i>{symbol}</i><space=-0.55em><voffset={arrowHeightEm:0.##}em><size=55%>→</size></voffset>";
+    }
+
+
+    private static TextMeshPro Label(Transform parent, string name, string text, Color color, Material material) {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        var tmp = go.AddComponent<TextMeshPro>();
+        tmp.text = text;
+        tmp.color = color;
+        tmp.fontSize = 0.5f;                                                    // 3D text: about 0.1 m per 1 pt
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.textWrappingMode = TextWrappingModes.NoWrap;
+        tmp.rectTransform.sizeDelta = new Vector2(0.2f, 0.1f);
+        tmp.fontSharedMaterial = material;
+        return tmp;
+    }
+
+
+    // drawn on top of everything. A soft white halo behind the glyphs (underlay) keeps the coloured symbols readable
+    // over the dark wheel; an outline would grow into the thin italic strokes and wash out their colour.
+    private static Material LabelOverlayMaterial() {
+        string path = $"{MaterialFolder}/ModuleLabel.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null) {
+            mat = new Material(TMP_Settings.defaultFontAsset.material) { name = "ModuleLabel" };
+            mat.shader = Shader.Find("TextMeshPro/Distance Field Overlay");
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        mat.DisableKeyword("OUTLINE_ON");
+        mat.SetFloat("_OutlineWidth", 0f);
+        mat.EnableKeyword("UNDERLAY_ON");
+        mat.SetColor("_UnderlayColor", new Color(1f, 1f, 1f, 0.9f));
+        mat.SetFloat("_UnderlayOffsetX", 0f);
+        mat.SetFloat("_UnderlayOffsetY", 0f);
+        mat.SetFloat("_UnderlayDilate", 0.6f);
+        mat.SetFloat("_UnderlaySoftness", 0.35f);
+        mat.SetFloat("_FaceDilate", 0.1f);                                      // slightly stronger strokes
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+
+    // unlit graphite with a dash texture (5 of 8 pixels opaque) and alpha clipping: no transparency sorting needed
+    private static Material DashedLineMaterial() {
+        string path = $"{MaterialFolder}/ModuleDashedLine.mat";
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat != null) {
+            return mat;
+        }
+        var dash = new Texture2D(8, 1, TextureFormat.RGBA32, false) {
+            name = "Dash",
+            wrapMode = TextureWrapMode.Repeat,
+            filterMode = FilterMode.Point,
+        };
+        for (int x = 0; x < 8; x++) {
+            dash.SetPixel(x, 0, x < 5 ? Color.white : Color.clear);
+        }
+        dash.Apply();
+        AssetDatabase.CreateAsset(dash, $"{TextureFolder}/Dash.asset");
+
+        mat = new Material(Shader.Find("Universal Render Pipeline/Unlit")) { name = "ModuleDashedLine" };
+        mat.SetTexture("_BaseMap", dash);
+        mat.SetColor("_BaseColor", Graphite);
+        mat.SetFloat("_AlphaClip", 1f);
+        mat.SetFloat("_Cutoff", 0.5f);
+        mat.EnableKeyword("_ALPHATEST_ON");
+        mat.renderQueue = (int)RenderQueue.AlphaTest;
+        AssetDatabase.CreateAsset(mat, path);
+        return mat;
+    }
+
+
+    private static void DashedLine(Transform parent, Vector3 from, Vector3 to, Material material) {
+        var line = parent.gameObject.AddComponent<LineRenderer>();
+        line.useWorldSpace = false;                                             // moves with its object
+        line.positionCount = 2;
+        line.SetPosition(0, from);
+        line.SetPosition(1, to);
+        line.sharedMaterial = material;
+        line.widthMultiplier = 0.0025f;
+        line.alignment = LineAlignment.View;                                    // flat towards the camera, like a drawn line
+        line.textureMode = LineTextureMode.Tile;
+        line.textureScale = new Vector2(40f, 1f);                               // one dash period per 2.5 cm
+        line.shadowCastingMode = ShadowCastingMode.Off;
+        line.receiveShadows = false;
+    }
+
+
     private static void ConfigureRig(Transform rig, ApparatusParameters parameters, Transform rotor, TrailRenderer trail,
                                      GameObject stand, float minTheta0Deg, float maxTheta0Deg, Vector3 vectorScales) {
         var so = new SerializedObject(rig.gameObject.AddComponent<ApparatusRig>());
@@ -453,6 +768,35 @@ public static class ModuleSceneSetup {
         Light rimLight = rim.GetComponent<Light>();
         rimLight.color = new Color32(230, 238, 255, 255);                           // slightly cool
         rimLight.intensity = 0.8f;
+
+        // ω_P arc height per apparatus (after Add simple top): lab just above the bearing block (the wheel is 12 cm
+        // from the vertical axis, the arc only 7 cm); simple top higher, its disk can stand almost upright
+        // ω⃗_P vector centred on the arc: lab ω_P ≈ 0.2 rad/s → 0.12 m (stays clear of the bearing block even at 2 ω_P),
+        // simple top ≈ 1.3 rad/s → 0.2 m
+        // precession cone to the axle end on the side L⃗ points to: lab wheel side 0.18 m, top 0.227 m (see the Build/Add steps)
+        foreach (var (rigName, arcHeight, precessionScale, coneLength) in
+                 new[] { ("LabRig", 0.16f, 0.6f, 0.18f), ("TopRig", 0.30f, 0.15f, 0.227f) }) {
+            Transform rig = FindInScene(scene, "Gyroscope").Find(rigName);
+            if (rig == null) continue;
+            var rigSettings = new SerializedObject(rig.GetComponent<ApparatusRig>());
+            rigSettings.FindProperty("precessionArcHeight").floatValue = arcHeight;
+            rigSettings.FindProperty("precessionScale").floatValue = precessionScale;
+            rigSettings.FindProperty("precessionConeLength").floatValue = coneLength;
+            rigSettings.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        // labels (after Add helpers): size, weight and the halo material
+        Transform helpersRoot = FindInScene(scene, "Helpers");
+        if (helpersRoot != null) {
+            Material labelMaterial = LabelOverlayMaterial();
+            foreach (TextMeshPro label in helpersRoot.GetComponentsInChildren<TextMeshPro>(true)) {
+                label.fontSize = 0.5f;
+                label.fontStyle = FontStyles.Bold;
+                label.fontSharedMaterial = labelMaterial;
+                label.UpdateMeshPadding();                                      // the halo needs room around the glyphs
+                EditorUtility.SetDirty(label);
+            }
+        }
 
         // ambient from three directions; reflections from the studio HDR (gives the metal its softbox highlights)
         RenderSettings.skybox = null;
