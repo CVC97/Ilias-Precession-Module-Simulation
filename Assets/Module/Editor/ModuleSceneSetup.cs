@@ -18,6 +18,7 @@ using UnityEngine.SceneManagement;
 //   Module → Add helpers            (step 4a, once) labels, axes, ω_P arc, switchboard ModuleHelpers
 //   Module → Add precession vector  (step 4a, once) ω⃗_P on the vertical axis, centred on the arc
 //   Module → Add precession cone    (step 4a, rerunnable) cone swept by the figure axis, ω_P label; arc and vector off by default
+//   Module → Add nutation cones     (step 4b, rerunnable) Nutations-, Rastpol-, Gangpolkegel for the balanced gyroscope
 // The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
@@ -465,25 +466,9 @@ public static class ModuleSceneSetup {
 
         Transform gyroscope = FindInScene(scene, "Gyroscope");
         Transform root = Empty("Precession", helpers, Vector3.zero);
-        Material lineMaterial = Unlit("ArrowD", "ModulePrecession", JuraRot);
-
-        // cone: faint double-sided surface, rim as a thin line (on a child: one renderer per object)
-        var coneObject = new GameObject("Cone");
-        coneObject.transform.SetParent(root, false);
-        HelperCone cone = coneObject.AddComponent<HelperCone>();                // also adds MeshFilter and MeshRenderer
-        var surface = coneObject.GetComponent<MeshRenderer>();
-        surface.sharedMaterial = TransparentUnlit("ModulePrecessionCone", new Color32(199, 13, 45, 30));
-        surface.shadowCastingMode = ShadowCastingMode.Off;
-        surface.receiveShadows = false;
-        Transform rimObject = Empty("Rim", coneObject.transform, Vector3.zero);
-        var rim = rimObject.gameObject.AddComponent<LineRenderer>();
-        rim.positionCount = 0;                                                  // HelperCone fills it at runtime
-        rim.sharedMaterial = lineMaterial;
-        rim.widthMultiplier = 0.003f;
-        rim.alignment = LineAlignment.View;
-        rim.shadowCastingMode = ShadowCastingMode.Off;
-        rim.receiveShadows = false;
-        SetReference(cone, "rim", rim);
+        HelperCone cone = CreateHelperCone(root, "Cone", TransparentUnlit("ModulePrecessionCone", Faint(JuraRot)),
+                                           Unlit("ArrowD", "ModulePrecession", JuraRot));
+        GameObject coneObject = cone.gameObject;
 
         // label with the other labels (hidden with them), placed by PrecessionDisplay
         TextMeshPro label = Label(helpers.Find("Labels"), "LabelPrecession", "<i>ω</i><sub><i>P</i></sub>", JuraRot,
@@ -502,6 +487,78 @@ public static class ModuleSceneSetup {
         EditorSceneManager.SaveScene(scene);
         Debug.Log("Precession cone added.");
     }
+
+
+    // step 4b: the cones of the force-free (balanced) gyroscope, see NutationCones. Colours (provisional, Carlo decides):
+    // Nutationskegel graphite like the figure axis it contains, Rastpolkegel uni-blau-3 (around L⃗, fixed in space),
+    // Gangpolkegel uni-blau-1 (around the figure axis, fixed in the body). Rerunnable: rebuilds Helpers/Nutation.
+    [MenuItem("Module/Add nutation cones")]
+    private static void AddNutationCones() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        Transform helpers = FindInScene(scene, "Helpers");
+        if (helpers == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run Module → Add helpers first.", "OK");
+            return;
+        }
+        Transform old = helpers.Find("Nutation");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+
+        Transform gyroscope = FindInScene(scene, "Gyroscope");
+        Transform root = Empty("Nutation", helpers, Vector3.zero);
+        HelperCone nutation = CreateHelperCone(root, "NutationCone", TransparentUnlit("ModuleNutationCone", Faint(Graphite)),
+                                               Unlit("ArrowD", "ModuleNutationRim", Graphite));
+        HelperCone space = CreateHelperCone(root, "SpaceCone", TransparentUnlit("ModuleSpaceCone", Faint(UniBlau3)),
+                                            Unlit("ArrowD", "ModuleSpaceRim", UniBlau3));
+        HelperCone body = CreateHelperCone(root, "BodyCone", TransparentUnlit("ModuleBodyCone", Faint(UniBlau1)),
+                                           Unlit("ArrowD", "ModuleBodyRim", UniBlau1));
+
+        var script = new SerializedObject(root.gameObject.AddComponent<NutationCones>());
+        script.FindProperty("controller").objectReferenceValue = gyroscope.GetComponent<ModuleGyroscopeController>();
+        script.FindProperty("nutationCone").objectReferenceValue = nutation;
+        script.FindProperty("spaceCone").objectReferenceValue = space;
+        script.FindProperty("bodyCone").objectReferenceValue = body;
+        script.ApplyModifiedPropertiesWithoutUndo();
+
+        var board = new SerializedObject(helpers.GetComponent<ModuleHelpers>());
+        board.FindProperty("nutationCone").objectReferenceValue = nutation.gameObject;
+        board.FindProperty("spaceCone").objectReferenceValue = space.gameObject;
+        board.FindProperty("bodyCone").objectReferenceValue = body.gameObject;
+        board.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Nutation cones added.");
+    }
+
+
+    // helper cone: faint double-sided surface, rim as a thin line (on a child: one renderer per object)
+    private static HelperCone CreateHelperCone(Transform parent, string name, Material surfaceMaterial, Material rimMaterial) {
+        var coneObject = new GameObject(name);
+        coneObject.transform.SetParent(parent, false);
+        HelperCone cone = coneObject.AddComponent<HelperCone>();                // also adds MeshFilter and MeshRenderer
+        var surface = coneObject.GetComponent<MeshRenderer>();
+        surface.sharedMaterial = surfaceMaterial;
+        surface.shadowCastingMode = ShadowCastingMode.Off;
+        surface.receiveShadows = false;
+        Transform rimObject = Empty("Rim", coneObject.transform, Vector3.zero);
+        var rim = rimObject.gameObject.AddComponent<LineRenderer>();
+        rim.positionCount = 0;                                                  // HelperCone fills it at runtime
+        rim.sharedMaterial = rimMaterial;
+        rim.widthMultiplier = 0.003f;
+        rim.alignment = LineAlignment.View;
+        rim.shadowCastingMode = ShadowCastingMode.Off;
+        rim.receiveShadows = false;
+        SetReference(cone, "rim", rim);
+        return cone;
+    }
+
+
+    // cone surfaces: the colour at 12 % opacity
+    private static Color32 Faint(Color32 color) => new Color32(color.r, color.g, color.b, 30);
 
 
     // URP/Unlit, transparent (alpha from the colour), both faces: for the helper cones
@@ -773,7 +830,7 @@ public static class ModuleSceneSetup {
         // from the vertical axis, the arc only 7 cm); simple top higher, its disk can stand almost upright
         // ω⃗_P vector centred on the arc: lab ω_P ≈ 0.2 rad/s → 0.12 m (stays clear of the bearing block even at 2 ω_P),
         // simple top ≈ 1.3 rad/s → 0.2 m
-        // precession cone to the axle end on the side L⃗ points to: lab wheel side 0.18 m, top 0.227 m (see the Build/Add steps)
+        // helper cones: slant length to the axle end on the side L⃗ points to: lab wheel side 0.18 m, top 0.227 m (Build/Add steps)
         foreach (var (rigName, arcHeight, precessionScale, coneLength) in
                  new[] { ("LabRig", 0.16f, 0.6f, 0.18f), ("TopRig", 0.30f, 0.15f, 0.227f) }) {
             Transform rig = FindInScene(scene, "Gyroscope").Find(rigName);
@@ -781,7 +838,7 @@ public static class ModuleSceneSetup {
             var rigSettings = new SerializedObject(rig.GetComponent<ApparatusRig>());
             rigSettings.FindProperty("precessionArcHeight").floatValue = arcHeight;
             rigSettings.FindProperty("precessionScale").floatValue = precessionScale;
-            rigSettings.FindProperty("precessionConeLength").floatValue = coneLength;
+            rigSettings.FindProperty("coneLength").floatValue = coneLength;
             rigSettings.ApplyModifiedPropertiesWithoutUndo();
         }
 

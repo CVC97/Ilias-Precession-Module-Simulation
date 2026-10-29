@@ -34,6 +34,13 @@ public class HelperCone : MonoBehaviour {
     }
 
 
+    // surface and rim; independent of the object's active state, which belongs to the switchboard (ModuleHelpers)
+    public void SetVisible(bool visible) {
+        GetComponent<MeshRenderer>().enabled = visible;
+        rim.enabled = visible;
+    }
+
+
     // apex, unit axis, height along the axis (negative: the cone opens the other way), rim radius; all in metres
     public void Set(Vector3 apex, Vector3 axis, float height, float radius) {
         transform.SetPositionAndRotation(apex, Quaternion.FromToRotation(Vector3.up, axis));

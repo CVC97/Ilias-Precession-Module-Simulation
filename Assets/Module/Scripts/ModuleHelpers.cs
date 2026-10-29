@@ -2,8 +2,10 @@ using UnityEngine;
 
 
 // Switchboard for everything that helps reading the motion but isn't part of the apparatus: vectors, their labels,
-// axes, the precession arrow, the trail. The page sets these through its presets (step 5); in the editor the
-// Inspector toggles work live, because the flags are applied every frame.
+// axes, cones, the trail. The page sets these through its presets (step 5); in the editor the Inspector toggles work
+// live, because the flags are applied every frame.
+// The flags say what may be shown; for the cones the physics decides as well: the precession cone needs a torque,
+// the nutation cones need none (only then is L⃗ fixed and they are more than momentary shapes).
 public class ModuleHelpers : MonoBehaviour {
     [SerializeField] private ModuleGyroscopeController controller;
     [SerializeField] private VectorDisplay vectors;
@@ -13,6 +15,9 @@ public class ModuleHelpers : MonoBehaviour {
     [SerializeField] private GameObject precessionCone;                         // cone swept by the figure axis, with its ω_P label
     [SerializeField] private GameObject precessionArc;                          // ω_P as a curved arrow (kept for comparison)
     [SerializeField] private GameObject precessionVector;                       // ω⃗_P (kept for comparison)
+    [SerializeField] private GameObject nutationCone;                           // Nutationskegel: figure axis around L⃗
+    [SerializeField] private GameObject spaceCone;                              // Rastpolkegel: ω⃗ around L⃗
+    [SerializeField] private GameObject bodyCone;                               // Gangpolkegel: ω⃗ around the figure axis
 
     [Header("Visible")]
     [SerializeField] private bool showL = true;
@@ -24,6 +29,9 @@ public class ModuleHelpers : MonoBehaviour {
     [SerializeField] private bool showPrecessionCone = true;
     [SerializeField] private bool showPrecessionArc = false;
     [SerializeField] private bool showPrecessionVector = false;
+    [SerializeField] private bool showNutationCone = true;
+    [SerializeField] private bool showSpaceCone = true;
+    [SerializeField] private bool showBodyCone = true;
     [SerializeField] private bool showTrail = true;                             // grey trail of the axle end
 
 
@@ -36,6 +44,9 @@ public class ModuleHelpers : MonoBehaviour {
     public void SetShowPrecessionCone(bool on) => showPrecessionCone = on;
     public void SetShowPrecessionArc(bool on) => showPrecessionArc = on;
     public void SetShowPrecessionVector(bool on) => showPrecessionVector = on;
+    public void SetShowNutationCone(bool on) => showNutationCone = on;
+    public void SetShowSpaceCone(bool on) => showSpaceCone = on;
+    public void SetShowBodyCone(bool on) => showBodyCone = on;
     public void SetShowTrail(bool on) => showTrail = on;
 
 
@@ -46,9 +57,14 @@ public class ModuleHelpers : MonoBehaviour {
         labels.SetActive(showLabels);
         figureAxis.SetActive(showFigureAxis);
         verticalAxis.SetActive(showVerticalAxis);
-        if (precessionCone != null) precessionCone.SetActive(showPrecessionCone);
         precessionArc.SetActive(showPrecessionArc);
         if (precessionVector != null) precessionVector.SetActive(showPrecessionVector);
+
+        bool forceFree = controller.Model != null && controller.Model.TorqueConst == 0;    // balanced lab gyroscope
+        if (precessionCone != null) precessionCone.SetActive(showPrecessionCone && !forceFree);
+        if (nutationCone != null) nutationCone.SetActive(showNutationCone && forceFree);
+        if (spaceCone != null) spaceCone.SetActive(showSpaceCone && forceFree);
+        if (bodyCone != null) bodyCone.SetActive(showBodyCone && forceFree);
 
         TrailRenderer trail = controller.ActiveRig.Trail;
         if (trail.enabled != showTrail) {

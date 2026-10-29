@@ -48,7 +48,7 @@ public class PrecessionDisplay : MonoBehaviour {
         }
 
         Vector3 pivot = controller.transform.position;
-        float length = controller.ActiveRig.PrecessionConeLength;
+        float length = controller.ActiveRig.ConeLength;
         float height = length * (float)Math.Cos(meanTheta);                     // negative: the cone opens downwards
         float radius = length * (float)Math.Sin(meanTheta);
         cone.Set(pivot, Vector3.up, height, radius);
