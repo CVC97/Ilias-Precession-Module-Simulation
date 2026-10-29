@@ -24,6 +24,14 @@ public class VectorDisplay : MonoBehaviour {
     private IGyroscopeModelSource controller;
 
 
+    // the module switches between apparatus of different size
+    public void SetScales(float l, float omega, float d) {
+        scaleL = l;
+        scaleOmega = omega;
+        scaleD = d;
+    }
+
+
     // general function to show or hide vectors
     private void DrawOrHide(ArrowBase arrow, bool show, Vector3 vector, Vector3 pivot) {
         if (show) {

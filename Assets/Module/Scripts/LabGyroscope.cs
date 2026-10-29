@@ -7,7 +7,7 @@ using UnityEngine;
 // Axis convention: the model's figure axis points from the pivot to the counterweight side, where the add-on weight
 // hangs in the notch; the wheel sits on the opposite side. So an add-on weight gives a positive torque constant.
 [CreateAssetMenu(fileName = "LabGyroscope", menuName = "Module/Lab Gyroscope")]
-public class LabGyroscope : ScriptableObject {
+public class LabGyroscope : ApparatusParameters {
     [Header("Wheel")]
     [SerializeField] private float wheelMass = 1.3f;                        // kg (measured 1.324)
     [SerializeField] private float wheelRadius = 0.12f;                     // m (0.1225)
@@ -31,19 +31,22 @@ public class LabGyroscope : ScriptableObject {
     public float CounterweightDistance => wheelMass * wheelDistance / counterweightMass;   // m_w d_w = m_c d_c
 
     // wheel as a thin disk; the measured value (pendulum) was 0.011 kg·m²
-    public double I3 => 0.5 * wheelMass * wheelRadius * wheelRadius;
+    public override double I3 => 0.5 * wheelMass * wheelRadius * wheelRadius;
 
     // about a horizontal axis through the pivot: wheel (disk about its diameter + Steiner), counterweight and
     // add-on weight as point masses; the axle is neglected
-    public double I1(double addOnMass) {
+    public override double I1(double addOnMass) {
         double wheel = 0.25 * wheelMass * wheelRadius * wheelRadius + wheelMass * wheelDistance * wheelDistance;
         double counterweight = counterweightMass * CounterweightDistance * CounterweightDistance;
         return wheel + counterweight + addOnMass * notchDistance * notchDistance;
     }
 
     // the balanced gyroscope only feels the add-on weight: D = m_z g r sinθ
-    public double TorqueConst(double addOnMass) => addOnMass * gravity * notchDistance;
+    public override double TorqueConst(double addOnMass) => addOnMass * gravity * notchDistance;
 
     // friction torque −c ψ̇ with c = I3/τ: for a horizontal axle without precession ω_R decays as e^(−t/τ)
-    public double FrictionCoeff => I3 / spinDecayTime;
+    public override double FrictionCoeff => I3 / spinDecayTime;
+
+    // the wheel sits on the negative side of the figure axis
+    public override int SpinSign => -1;
 }

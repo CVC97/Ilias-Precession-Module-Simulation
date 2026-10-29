@@ -13,6 +13,7 @@ using UnityEngine.SceneManagement;
 //                                  overwrites manual changes to these, so tune the values here while we iterate
 //   Module → Use module controller  (step 2, once) swaps GyroscopeController for ModuleGyroscopeController
 //   Module → Build lab gyroscope    (step 3, once) replaces the toy top by the lab apparatus (dimensions from LabGyroscope)
+//   Module → Add simple top         (step 3b, once) second apparatus in the same build (dimensions from SimpleTop)
 // The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
@@ -25,6 +26,7 @@ public static class ModuleSceneSetup {
     private const string ReflectionCubemapPath = "Assets/Module/Textures/studio_reflection.hdr";
     private const int ReflectionFaceSize = 128;                                         // px per cube face; reflections only, never visible
     private const string LabAssetPath = "Assets/Module/LabGyroscope.asset";
+    private const string SimpleTopAssetPath = "Assets/Module/SimpleTop.asset";
     private const string MeshFolder = "Assets/Module/Meshes";
     private const string CylinderMeshPath = "Assets/Module/Meshes/SmoothCylinder.asset";
 
@@ -98,14 +100,8 @@ public static class ModuleSceneSetup {
             PrefabUtility.UnpackPrefabInstance(gyroscope, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         }
 
-        // new controller with the old one's scene references; private [SerializeField] fields are set via SerializedObject
-        var oldSettings = new SerializedObject(oldController);
-        var controller = gyroscope.AddComponent<ModuleGyroscopeController>();
-        var settings = new SerializedObject(controller);
-        settings.FindProperty("lab").objectReferenceValue = LabAsset();
-        settings.FindProperty("rotor").objectReferenceValue = oldSettings.FindProperty("rotor").objectReferenceValue;
-        settings.FindProperty("trail").objectReferenceValue = oldSettings.FindProperty("trail").objectReferenceValue;
-        settings.ApplyModifiedPropertiesWithoutUndo();
+        // new controller; its apparatus rigs are wired by Build lab gyroscope + Add simple top
+        gyroscope.AddComponent<ModuleGyroscopeController>();
         Object.DestroyImmediate(oldController);
 
         // arrow scales for the lab values (L ≈ 0.4 kg·m²/s, ω ≈ 40 rad/s, D ≈ 0.08 N·m); provisional until step 3
@@ -146,7 +142,7 @@ public static class ModuleSceneSetup {
             EditorUtility.DisplayDialog("Module scene", "Run Module → Use module controller first.", "OK");
             return;
         }
-        if (gyroscope.Find("Body/Counterweight") != null) {
+        if (gyroscope.Find("Body/Counterweight") != null || gyroscope.Find("LabRig") != null) {
             EditorUtility.DisplayDialog("Module scene", "The lab gyroscope is already built.", "OK");
             return;
         }
@@ -235,6 +231,104 @@ public static class ModuleSceneSetup {
     }
 
 
+    // second apparatus in the same build: the simple top (disk on an axle, tip resting in a cup on a tower), for the
+    // fundamentals pages. Both rigs hang under the Gyroscope object; the controller shows one of them.
+    [MenuItem("Module/Add simple top")]
+    private static void AddSimpleTop() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        Transform gyroscope = FindInScene(scene, "Gyroscope");
+        var controller = gyroscope.GetComponent<ModuleGyroscopeController>();
+        if (gyroscope.Find("TopRig") != null) {
+            EditorUtility.DisplayDialog("Module scene", "The simple top is already added.", "OK");
+            return;
+        }
+        if (controller == null || gyroscope.Find("Body/Counterweight") == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run Module → Use module controller and Build lab gyroscope first.", "OK");
+            return;
+        }
+
+        // the lab parts move into their own rig (LabRig sits at the origin of Gyroscope: nothing moves in the scene)
+        Transform labStand = FindInScene(scene, "Stand");
+        Transform labRig = Empty("LabRig", gyroscope, Vector3.zero);
+        gyroscope.Find("Rotor").SetParent(labRig, false);
+        gyroscope.Find("Body").SetParent(labRig, false);
+        Transform labTip = labRig.Find("Body/Tip");
+        ConfigureRig(labRig, LabAsset(), labRig.Find("Rotor"), labTip.GetComponent<TrailRenderer>(), labStand.gameObject,
+                     60f, 120f, new Vector3(0.9f, 0.0053f, 2.5f));
+
+        // simple top: dimensions from SimpleTop.asset; figure axis = local up, from the pivot to the disk
+        SimpleTop top = SimpleTopAsset();
+        float radius = top.DiskRadius, leverArm = top.LeverArm, axleEnd = leverArm + 0.06f;
+        Transform topRig = Empty("TopRig", gyroscope, Vector3.zero);
+        Transform rotor = Empty("Rotor", topRig, new Vector3(0f, leverArm, 0f));
+        Part("Disk", PrimitiveType.Cylinder, rotor, Vector3.zero, new Vector3(2*radius, 0.012f, 2*radius), "ModuleWheel");
+        Part("Hub", PrimitiveType.Cylinder, rotor, Vector3.zero, new Vector3(0.03f, 0.02f, 0.03f), "ModuleTower");
+        Part("Marker", PrimitiveType.Cube, rotor, new Vector3(radius - 0.004f, 0f, 0f), new Vector3(0.012f, 0.026f, 0.012f), "ModuleMarker");
+        Transform body = Empty("Body", topRig, Vector3.zero);
+        Part("Axle", PrimitiveType.Cylinder, body, new Vector3(0f, axleEnd / 2, 0f), new Vector3(0.006f, axleEnd / 2, 0.006f), "ModuleAxle");
+        Part("PivotBall", PrimitiveType.Sphere, body, Vector3.zero, new Vector3(0.016f, 0.016f, 0.016f), "ModuleMarker");
+        Part("End", PrimitiveType.Sphere, body, new Vector3(0f, axleEnd, 0f), new Vector3(0.012f, 0.012f, 0.012f), "ModuleAxle");
+        Transform topTip = Object.Instantiate(labTip.gameObject, body).transform;    // same trail settings as the lab
+        topTip.name = "Tip";
+        topTip.localPosition = new Vector3(0f, axleEnd, 0f);
+
+        // its stand: round base plate, tower, cup for the tip
+        var standObject = new GameObject("TopStand");
+        Transform topStand = standObject.transform;
+        topStand.SetPositionAndRotation(labStand.position, Quaternion.identity);
+        float towerTop = PivotHeight - 0.008f;
+        Part("Base", PrimitiveType.Cylinder, topStand, new Vector3(0f, 0.01f, 0f), new Vector3(0.24f, 0.01f, 0.24f), "ModuleBase");
+        Part("Tower", PrimitiveType.Cylinder, topStand, new Vector3(0f, (0.02f + towerTop) / 2, 0f),
+             new Vector3(0.02f, (towerTop - 0.02f) / 2, 0.02f), "ModuleTower");
+        Part("Cup", PrimitiveType.Cylinder, topStand, new Vector3(0f, towerTop, 0f), new Vector3(0.03f, 0.006f, 0.03f), "ModuleTower");
+
+        // θ₀ 20–100° (beyond, the disk would come close to the tower); arrows ≈ 0.35 / 0.22 / 0.2 m at 2400 rpm, 60°
+        ConfigureRig(topRig, top, rotor, topTip.GetComponent<TrailRenderer>(), standObject, 20f, 100f, new Vector3(0.28f, 0.00088f, 0.14f));
+
+        var settings = new SerializedObject(controller);
+        settings.FindProperty("labRig").objectReferenceValue = labRig.GetComponent<ApparatusRig>();
+        settings.FindProperty("topRig").objectReferenceValue = topRig.GetComponent<ApparatusRig>();
+        settings.ApplyModifiedPropertiesWithoutUndo();
+
+        // in edit mode only the lab apparatus is visible; at runtime the controller decides
+        topRig.gameObject.SetActive(false);
+        standObject.SetActive(false);
+
+        ApplyLook(scene);                                                       // smooth cylinders for the new parts
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("Simple top added.");
+    }
+
+
+    private static void ConfigureRig(Transform rig, ApparatusParameters parameters, Transform rotor, TrailRenderer trail,
+                                     GameObject stand, float minTheta0Deg, float maxTheta0Deg, Vector3 vectorScales) {
+        var so = new SerializedObject(rig.gameObject.AddComponent<ApparatusRig>());
+        so.FindProperty("parameters").objectReferenceValue = parameters;
+        so.FindProperty("rotor").objectReferenceValue = rotor;
+        so.FindProperty("trail").objectReferenceValue = trail;
+        so.FindProperty("stand").objectReferenceValue = stand;
+        so.FindProperty("minTheta0Deg").floatValue = minTheta0Deg;
+        so.FindProperty("maxTheta0Deg").floatValue = maxTheta0Deg;
+        so.FindProperty("vectorScales").vector3Value = vectorScales;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+
+    private static SimpleTop SimpleTopAsset() {
+        var top = AssetDatabase.LoadAssetAtPath<SimpleTop>(SimpleTopAssetPath);
+        if (top == null) {
+            top = ScriptableObject.CreateInstance<SimpleTop>();
+            AssetDatabase.CreateAsset(top, SimpleTopAssetPath);
+        }
+        return top;
+    }
+
+
     // primitive without collider (no physics engine involved: we integrate ourselves)
     private static Transform Part(string name, PrimitiveType type, Transform parent, Vector3 localPosition, Vector3 localScale, string material) {
         GameObject go = GameObject.CreatePrimitive(type);
@@ -292,9 +386,9 @@ public static class ModuleSceneSetup {
             [Original("Tower")] = Lit("Tower", "ModuleTower", new Color32(185, 190, 196, 255), 0.9f, 0.5f),        // satin aluminium
             [Original("Base")] = Lit("Base", "ModuleBase", UniBlau1, 0.2f, 0.75f),                                 // blue lacquer
             [Original("Floor")] = Lit("Floor", "ModuleFloor", new Color32(232, 235, 240, 255), 0f, 0.3f),
-            [Original("ArrowOmega")] = Lit("ArrowOmega", "ModuleArrowOmega", UniBlau1, 0f, 0.6f, 0.25f),
-            [Original("ArrowL")] = Lit("ArrowL", "ModuleArrowL", UniBlau3, 0f, 0.6f, 0.25f),
-            [Original("ArrowD")] = Lit("ArrowD", "ModuleArrowD", YellowOrange, 0f, 0.6f, 0.25f),
+            [Original("ArrowOmega")] = Unlit("ArrowOmega", "ModuleArrowOmega", UniBlau1),
+            [Original("ArrowL")] = Unlit("ArrowL", "ModuleArrowL", UniBlau3),
+            [Original("ArrowD")] = Unlit("ArrowD", "ModuleArrowD", YellowOrange),
             [Original("TrailWhite")] = Tinted("TrailWhite", "ModuleTrail", new Color32(90, 98, 110, 255)),
         };
         AssetDatabase.SaveAssets();
@@ -303,20 +397,28 @@ public static class ModuleSceneSetup {
         // apparatus: smooth cylinders instead of the 20-sided primitive (the wheel rim showed facets);
         // arrows slightly thicker than the axle (6 mm), on which L and ω lie, so the surfaces don't z-fight
         Mesh cylinder = SmoothCylinder();
-        foreach (string root in new[] { "Gyroscope", "Stand" }) {
-            foreach (MeshFilter filter in FindInScene(scene, root).GetComponentsInChildren<MeshFilter>(true)) {
+        foreach (string root in new[] { "Gyroscope", "Stand", "TopStand" }) {
+            Transform rootTransform = FindInScene(scene, root);
+            if (rootTransform == null) continue;                                    // TopStand only after Add simple top
+            foreach (MeshFilter filter in rootTransform.GetComponentsInChildren<MeshFilter>(true)) {
                 if (filter.sharedMesh != null && filter.sharedMesh.name == "Cylinder") {
                     filter.sharedMesh = cylinder;
                     PrefabUtility.RecordPrefabInstancePropertyModifications(filter);
                 }
             }
         }
+        // arrows are helpers, not parts: flat colour (Unlit, above), no shadows
         foreach (VectorArrow3D arrow in FindInScene(scene, "Gyroscope").GetComponentsInChildren<VectorArrow3D>(true)) {
             var a = new SerializedObject(arrow);
             a.FindProperty("shaftDiameter").floatValue = 0.007f;
             a.FindProperty("headDiameter").floatValue = 0.020f;
             a.FindProperty("headLength").floatValue = 0.038f;
             a.ApplyModifiedPropertiesWithoutUndo();
+            foreach (Renderer r in arrow.GetComponentsInChildren<Renderer>(true)) {
+                r.shadowCastingMode = ShadowCastingMode.Off;
+                r.receiveShadows = false;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(r);
+            }
         }
 
         // stage: large floor that fades into the background through fog of the same colour
@@ -534,6 +636,16 @@ public static class ModuleSceneSetup {
             mat.DisableKeyword("_EMISSION");
             mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.EmissiveIsBlack;
         }
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+
+    // URP/Unlit: exactly the given colour, no shading or highlights (for helpers like the vector arrows)
+    private static Material Unlit(string source, string name, Color color) {
+        Material mat = CopyOf(source, name);
+        mat.shader = Shader.Find("Universal Render Pipeline/Unlit");
+        mat.SetColor("_BaseColor", color);
         EditorUtility.SetDirty(mat);
         return mat;
     }

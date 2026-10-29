@@ -2,24 +2,25 @@ using System;
 using UnityEngine;
 
 
-// Runs the lab gyroscope in the module scene: parameters in lab language, released or guided start, push, friction.
+// Runs the gyroscope in the module scene: the lab gyroscope or the simple top (one build, the page chooses), with
+// parameters in lab language, released or guided start, push, friction.
 // The setters only note a change; the simulation restarts once in the next FixedUpdate. A whole preset from the page
 // (step 5) therefore costs one restart, not one per value.
 public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
+    public enum Apparatus { Lab, SimpleTop }                                    // Versuchskreisel / einfacher Kreisel
     public enum StartMode { Released, Guided }                                  // losgelassen / geführt
 
-    [SerializeField] private LabGyroscope lab;
+    [Header("Apparatus")]
+    [SerializeField] private Apparatus apparatus = Apparatus.Lab;
+    [SerializeField] private ApparatusRig labRig;
+    [SerializeField] private ApparatusRig topRig;
 
     [Header("Experiment")]
-    [SerializeField, Range(0f, 1000f)] private float rpm = 400f;                // Drehzahl of the wheel
-    [SerializeField, Range(0f, 60f)] private float addOnMassGrams = 30f;        // Zusatzgewicht
-    [SerializeField, Range(60f, 120f)] private float theta0Deg = 90f;           // Neigung θ₀; 90° = horizontal axle
-                                                                                // (beyond ±30° the wheel would hit the stand)
+    [SerializeField, Range(0f, 3000f)] private float rpm = 400f;                // Drehzahl of the wheel
+    [SerializeField, Range(0f, 60f)] private float addOnMassGrams = 30f;        // Zusatzgewicht (lab only)
+    [SerializeField, Range(10f, 120f)] private float theta0Deg = 90f;           // Neigung θ₀; clamped to the apparatus' limits
     [SerializeField] private StartMode startMode = StartMode.Guided;
     [SerializeField] private bool friction = false;                             // Reibung
-    // spin sense: the model's figure axis points to the counterweight side, so a negative ω3 makes L point from the
-    // pivot through the wheel, as in textbook figures; precession then runs the other way round (same magnitude)
-    [SerializeField] private bool angularMomentumThroughWheel = true;
 
     [Header("Push (Stoß)")]
     [SerializeField] private float pushThetaDot = 0.5f;                         // rad/s, knock on the axle from above/below
@@ -30,8 +31,6 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     [Header("Display")]
     [SerializeField] private float maxVisibleSpinRps = 5f;                      // revolutions per REAL second
-    [SerializeField] private Transform rotor;
-    [SerializeField] private TrailRenderer trail;
 
     [Header("Readout (written in Play mode)")]
     [SerializeField] private float omegaR;                                      // rad/s
@@ -40,17 +39,21 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     [SerializeField] private float energyError;
 
     private GyroscopeModel gyroscope;
+    private VectorDisplay vectors;
     private bool resetPending;
     private double e0, spinEnergy0;
     private float displaySpinDeg;
 
+    private ApparatusRig Rig => apparatus == Apparatus.Lab ? labRig : topRig;
+
     public GyroscopeModel Model => gyroscope;
     public bool SpinDisplayLimited { get; private set; }
 
+    public Apparatus SelectedApparatus => apparatus;                            // "Apparatus" is taken by the enum
     public float Rpm => rpm;
     public float AddOnMassGrams => addOnMassGrams;
     public float Theta0Deg => theta0Deg;
-    public StartMode SelectedStartMode => startMode;                            // "StartMode" is taken by the enum
+    public StartMode SelectedStartMode => startMode;
     public bool Friction => friction;
 
     // readouts as magnitudes (the signs only encode the spin sense)
@@ -61,6 +64,11 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
 
     // ---- called by the UI / bridge ----
+
+    public void SetApparatus(Apparatus value) {
+        apparatus = value;
+        resetPending = true;
+    }
 
     public void SetRpm(float value) {
         rpm = value;
@@ -85,7 +93,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     // no restart: friction can be switched on while the gyroscope runs (measure T_R before and after)
     public void SetFriction(bool on) {
         friction = on;
-        if (gyroscope != null) gyroscope.FrictionCoeff = on ? lab.FrictionCoeff : 0;
+        if (gyroscope != null) gyroscope.FrictionCoeff = on ? Rig.Parameters.FrictionCoeff : 0;
     }
 
     [ContextMenu("Neustart")]
@@ -100,12 +108,19 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
 
     private void ResetSimulation() {
-        double addOnMass = addOnMassGrams / 1000.0;
-        gyroscope = GyroscopeModel.FromInertia(lab.I1(addOnMass), lab.I3, lab.TorqueConst(addOnMass));
-        gyroscope.FrictionCoeff = friction ? lab.FrictionCoeff : 0;
+        ApparatusRig rig = Rig;
+        ApparatusParameters p = rig.Parameters;
+        labRig.Show(rig == labRig);
+        topRig.Show(rig == topRig);
+        vectors.SetScales(rig.VectorScales.x, rig.VectorScales.y, rig.VectorScales.z);
 
-        double omega3 = (angularMomentumThroughWheel ? -1 : 1) * rpm * 2*Math.PI / 60;
-        double theta0 = theta0Deg * Math.PI / 180;
+        double addOnMass = addOnMassGrams / 1000.0;
+        gyroscope = GyroscopeModel.FromInertia(p.I1(addOnMass), p.I3, p.TorqueConst(addOnMass));
+        gyroscope.FrictionCoeff = friction ? p.FrictionCoeff : 0;
+
+        // spin sense chosen so that L points from the pivot through the wheel
+        double omega3 = p.SpinSign * rpm * 2*Math.PI / 60;
+        double theta0 = Mathf.Clamp(theta0Deg, rig.MinTheta0Deg, rig.MaxTheta0Deg) * Math.PI / 180;
         double phiDot0 = 0;                                                     // released: the axle starts at rest
         if (startMode == StartMode.Guided) {
             phiDot0 = gyroscope.SteadyPrecessionRate(theta0, omega3);           // guided by hand into steady precession
@@ -117,11 +132,16 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         gyroscope.SetInitialConditions(theta0, 0, phiDot0, omega3);
 
         e0 = gyroscope.Energy;
-        spinEnergy0 = 0.5 * lab.I3 * omega3*omega3;
+        spinEnergy0 = 0.5 * p.I3 * omega3*omega3;
         resetPending = false;
 
         ApplyPose();
-        if (trail != null) trail.Clear();
+        if (rig.Trail != null) rig.Trail.Clear();
+    }
+
+
+    void Awake() {
+        vectors = GetComponent<VectorDisplay>();
     }
 
 
@@ -180,7 +200,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         float tiltDeg = PhysicsToUnity.Angle(gyroscope.Theta);
         float phiDeg = PhysicsToUnity.Angle(gyroscope.Phi);
 
-        rotor.localRotation = Quaternion.AngleAxis(displaySpinDeg, Vector3.up);
+        Rig.Rotor.localRotation = Quaternion.AngleAxis(displaySpinDeg, Vector3.up);
 
         Quaternion tilt = Quaternion.AngleAxis(tiltDeg, Vector3.right);
         Quaternion precession = Quaternion.AngleAxis(phiDeg, Vector3.up);
