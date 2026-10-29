@@ -41,6 +41,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     private GyroscopeModel gyroscope;
     private VectorDisplay vectors;
     private bool resetPending;
+    private bool pushPending;
     private double e0, spinEnergy0;
     private float displaySpinDeg;
 
@@ -56,6 +57,11 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public float Theta0Deg => theta0Deg;
     public StartMode SelectedStartMode => startMode;
     public bool Friction => friction;
+    public float PushThetaDot => pushThetaDot;
+    public float PushPhiDot => pushPhiDot;
+
+    public double SimTime { get; private set; }                                 // s since the last restart, simulated time
+    public int Run { get; private set; }                                        // counts restarts: the page sees when a new run begins
 
     // θ as the page and the Inspector use it: angle between L⃗ (wheel side) and the vertical, as in the module text
     // (dφ = dL/(L sin θ)). The model's figure axis points to the side where the torque acts, on the lab gyroscope the
@@ -108,9 +114,16 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         resetPending = true;
     }
 
+    // strength of the next push, no restart
+    public void SetPush(float thetaDot, float phiDot) {
+        pushThetaDot = thetaDot;
+        pushPhiDot = phiDot;
+    }
+
+    // applied in the next FixedUpdate, after a pending restart: a preset followed by a push hits the new run
     [ContextMenu("Stoß")]
     public void Push() {
-        gyroscope.Push(pushThetaDot, pushPhiDot);
+        pushPending = true;
     }
 
 
@@ -141,6 +154,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         e0 = gyroscope.Energy;
         spinEnergy0 = 0.5 * p.I3 * omega3*omega3;
         resetPending = false;
+        SimTime = 0;
+        Run++;
 
         ApplyPose();
         if (rig.Trail != null) rig.Trail.Clear();
@@ -169,14 +184,23 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         if (resetPending) {
             ResetSimulation();
         }
+        if (pushPending) {
+            gyroscope.Push(pushThetaDot, pushPhiDot);
+            pushPending = false;
+        }
         double h = (double)Time.fixedDeltaTime / substeps;
         for (int i = 0; i < substeps; i++) {
             gyroscope.RK4Step(h);
         }
+        SimTime += Time.fixedDeltaTime;
     }
 
 
     void Update() {
+        // paused (time scale 0): no FixedUpdate, but a new preset or Neustart should show at once
+        if (resetPending && Time.timeScale == 0f) {
+            ResetSimulation();
+        }
         UpdateDisplaySpin();
         ApplyPose();
 

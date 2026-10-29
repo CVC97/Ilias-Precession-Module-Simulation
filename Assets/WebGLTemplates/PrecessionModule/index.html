@@ -75,12 +75,66 @@
       fill.style.width = (100 * progress) + "%";
       percent.textContent = Math.round(100 * progress) + " %";
     }).then((unityInstance) => {
-      window.unityInstance = unityInstance;           // global handle for the JS → C# bridge (step 5)
+      window.unityInstance = unityInstance;
+      queued.forEach(([cmd, value]) => forward(cmd, value));
+      queued.length = 0;
       loading.classList.add("done");                  // fade out (CSS transition) …
       loading.addEventListener("transitionend", () => loading.remove(), { once: true });
     }).catch(showError);
 
-    // step 5: postMessage listener (origin check, command allowlist) → unityInstance.SendMessage("WebBridge", …)
+    // ---- page → simulation ----
+    // The page sends {source: "precession-module", type: "command", cmd, value} with postMessage. Only commands listed
+    // here reach C# (ModuleWebBridge on the WebBridge object), with the value converted to what the C# method takes:
+    // SendMessage carries one number or one string.
+    // The answers (ready, state ~10 Hz) come from C# through ModuleBridge.jslib.
+    // ?embedded=1 changes nothing here: the module build has no Unity UI, the page provides all controls.
+    const COMMANDS = {
+      ApplyPreset: "json",        // complete preset, missing fields take the defaults; one restart
+      SetHelpers: "json",         // partial: only the named show flags change
+      SetApparatus: "string",     // "lab" | "top"
+      SetStartMode: "string",     // "guided" | "released"
+      SetRpm: "number",
+      SetAddOnMassGrams: "number",
+      SetTheta0Deg: "number",     // θ₀ of L⃗
+      SetFriction: "bool",        // no restart
+      SetTimeScale: "number",
+      SetPaused: "bool",
+      Restart: "none",
+      Push: "none",
+    };
+    const queued = [];            // commands that arrive before Unity runs
+
+    function forward(cmd, value) {
+      const kind = COMMANDS[cmd];
+      if (kind === "none") {
+        window.unityInstance.SendMessage("WebBridge", cmd);
+      } else if (kind === "json") {
+        window.unityInstance.SendMessage("WebBridge", cmd, typeof value === "string" ? value : JSON.stringify(value));
+      } else if (kind === "string") {
+        window.unityInstance.SendMessage("WebBridge", cmd, String(value));
+      } else if (kind === "bool") {
+        window.unityInstance.SendMessage("WebBridge", cmd, value ? 1 : 0);
+      } else if (Number.isFinite(value)) {
+        window.unityInstance.SendMessage("WebBridge", cmd, value);
+      } else {
+        console.warn("precession-sim: " + cmd + " needs a number, got", value);
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.origin !== window.location.origin) return;           // only the module page on the same server
+      const data = event.data;
+      if (!data || data.source !== "precession-module" || data.type !== "command") return;
+      if (!Object.hasOwn(COMMANDS, data.cmd)) {
+        console.warn("precession-sim: unknown command", data.cmd);
+        return;
+      }
+      if (window.unityInstance) {
+        forward(data.cmd, data.value);
+      } else {
+        queued.push([data.cmd, data.value]);
+      }
+    });
   </script>
 </body>
 </html>

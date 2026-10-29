@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!-- Test page for the module build's bridge (step 5): plays the Angular page's part.
+     Build with the profile "Web - Module - Release" (→ Builds/ModuleWeb/), then from the repository root:
+       python3 -m http.server 8000
+     and open http://localhost:8000/Tools/bridge-test.html (same origin as the iframe, as on the module server). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bridge test</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 16px; background: #f0f2f5; color: #111827; }
+    main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; }
+    iframe { width: 100%; aspect-ratio: 16 / 10; border: 0; background: #dee3e9; }
+    section { background: white; padding: 12px; border-radius: 6px; margin-bottom: 12px; }
+    h2 { font-size: 14px; margin: 0 0 8px; }
+    button { margin: 2px 4px 2px 0; }
+    textarea { width: 100%; box-sizing: border-box; font: 12px monospace; height: 9em; }
+    pre { font: 12px monospace; margin: 0; white-space: pre-wrap; }
+    #log { height: 14em; overflow-y: auto; }
+    label { display: block; margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <div>
+      <iframe id="sim" src="../Builds/ModuleWeb/index.html?embedded=1"></iframe>
+      <section>
+        <h2>Log</h2>
+        <pre id="log"></pre>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2>Preset</h2>
+        <button data-preset="p1">p1 explore</button>
+        <button data-preset="p2">p2 top</button>
+        <button data-preset="p5">p5 precession</button>
+        <button data-preset="p6">p6 nutation</button>
+        <textarea id="preset"></textarea>
+        <button id="apply">ApplyPreset</button>
+      </section>
+      <section>
+        <h2>Live</h2>
+        <button data-cmd="Push">Push</button>
+        <button data-cmd="Restart">Restart</button>
+        <button id="pause">Pause</button>
+        <label>rpm <input id="rpm" type="range" min="0" max="800" step="10" value="400"> <span id="rpmValue">400</span></label>
+        <label><input id="trail" type="checkbox" checked> trail (SetHelpers)</label>
+        <label><input id="friction" type="checkbox"> friction</label>
+        <button id="bad">unknown command</button>
+        <button id="badJson">malformed JSON</button>
+      </section>
+      <section>
+        <h2>State <span id="rate"></span></h2>
+        <pre id="state">waiting for ready …</pre>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const PRESETS = {
+      p1: { apparatus: "lab", rpm: 400, addOnMassGrams: 30, show: { L: false, omega: false, D: false, labels: false, precessionCone: false } },
+      p2: { apparatus: "top", rpm: 2400, theta0Deg: 60, show: { D: false, precessionCone: false } },
+      p5: { apparatus: "lab", rpm: 400, addOnMassGrams: 30, theta0Deg: 90 },
+      p6: { apparatus: "lab", rpm: 200, addOnMassGrams: 0, pushThetaDot: 2, show: { D: false } },
+    };
+
+    const sim = document.querySelector("#sim");
+    const logEl = document.querySelector("#log");
+    const stateEl = document.querySelector("#state");
+    const presetEl = document.querySelector("#preset");
+    let ready = false, paused = false, states = 0;
+
+    function log(text) {
+      logEl.textContent += new Date().toLocaleTimeString() + "  " + text + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function send(cmd, value) {
+      if (!ready) { log("not ready, dropped: " + cmd); return; }      // the real page queues until ready
+      sim.contentWindow.postMessage({ source: "precession-module", type: "command", cmd, value }, location.origin);
+      log("→ " + cmd + (value === undefined ? "" : " " + JSON.stringify(value)));
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.origin !== location.origin || event.data?.source !== "precession-sim") return;
+      if (event.data.type === "ready") {
+        ready = true;
+        log("← ready");
+        send("ApplyPreset", PRESETS.p5);
+      } else if (event.data.type === "state") {
+        states++;
+        stateEl.textContent = JSON.stringify(event.data, null, 1);
+        paused = event.data.paused;                                       // a preset unpauses
+        document.querySelector("#pause").textContent = paused ? "Resume" : "Pause";
+      }
+    });
+    setInterval(() => { document.querySelector("#rate").textContent = "(" + states + " Hz)"; states = 0; }, 1000);
+
+    document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => {
+      presetEl.value = JSON.stringify(PRESETS[b.dataset.preset], null, 1);
+      send("ApplyPreset", PRESETS[b.dataset.preset]);
+    }));
+    document.querySelector("#apply").addEventListener("click", () => send("ApplyPreset", presetEl.value));
+    document.querySelectorAll("[data-cmd]").forEach((b) => b.addEventListener("click", () => send(b.dataset.cmd)));
+    document.querySelector("#pause").addEventListener("click", (e) => {
+      paused = !paused;
+      e.target.textContent = paused ? "Resume" : "Pause";
+      send("SetPaused", paused);
+    });
+    const rpm = document.querySelector("#rpm");
+    rpm.addEventListener("input", () => document.querySelector("#rpmValue").textContent = rpm.value);
+    rpm.addEventListener("change", () => send("SetRpm", Number(rpm.value)));
+    document.querySelector("#trail").addEventListener("change", (e) => send("SetHelpers", { trail: e.target.checked }));
+    document.querySelector("#friction").addEventListener("change", (e) => send("SetFriction", e.target.checked));
+    document.querySelector("#bad").addEventListener("click", () => send("SetSnow", 1));       // iframe console: unknown command
+    document.querySelector("#badJson").addEventListener("click", () => send("ApplyPreset", "{rpm:"));   // Unity log: ignored
+  </script>
+</body>
+</html>

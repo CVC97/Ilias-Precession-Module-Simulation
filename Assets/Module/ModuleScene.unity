@@ -387,6 +387,7 @@ MonoBehaviour:
   spaceCone: {fileID: 1118311551}
   bodyCone: {fileID: 1680984996}
   minAngleDeg: 0.5
+  length: 0.3
 --- !u!1 &109400049
 GameObject:
   m_ObjectHideFlags: 0
@@ -1962,19 +1963,20 @@ MonoBehaviour:
   nutationCone: {fileID: 2076475454}
   spaceCone: {fileID: 1118311549}
   bodyCone: {fileID: 1680984995}
-  showL: 1
-  showOmega: 1
-  showD: 1
-  showLabels: 1
-  showFigureAxis: 0
-  showVerticalAxis: 0
-  showPrecessionCone: 1
-  showPrecessionArc: 0
-  showPrecessionVector: 0
-  showNutationCone: 1
-  showSpaceCone: 1
-  showBodyCone: 1
-  showTrail: 1
+  show:
+    L: 1
+    omega: 1
+    D: 1
+    labels: 1
+    figureAxis: 0
+    verticalAxis: 0
+    precessionCone: 1
+    precessionArc: 0
+    precessionVector: 0
+    nutationCone: 1
+    spaceCone: 1
+    bodyCone: 1
+    trail: 1
 --- !u!4 &586204393
 Transform:
   m_ObjectHideFlags: 0
@@ -7219,8 +7221,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1578540384}
-  - component: {fileID: 1578540385}
   - component: {fileID: 1578540386}
+  - component: {fileID: 1578540387}
   m_Layer: 0
   m_Name: WebBridge
   m_TagString: Untagged
@@ -7243,25 +7245,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1578540385
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1578540382}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b4544a662e0f4738cb83ad4fb5516f6f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WebBridge
-  controller: {fileID: 0}
-  vectors: {fileID: 2294584765450849415}
-  simTime: {fileID: 1578540386}
-  snow: {fileID: 0}
-  snowFast: {fileID: 0}
-  uiCanvas: {fileID: 1097630573}
-  hideUguiInBrowser: 0
 --- !u!114 &1578540386
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7274,6 +7257,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b89e9881f4021571b98693c1a5138a1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimulationTime
+--- !u!114 &1578540387
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1578540382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 13680a5c4b841331f92112876719ca8f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ModuleWebBridge
+  controller: {fileID: 8268604148283961456}
+  helpers: {fileID: 586204392}
+  simTime: {fileID: 1578540386}
+  stateInterval: 0.1
+  testPreset: '{"apparatus":"lab","rpm":200,"addOnMassGrams":0,"pushThetaDot":2,"show":{"D":false}}'
+  lastMessage: 
 --- !u!1 &1604931511
 GameObject:
   m_ObjectHideFlags: 0

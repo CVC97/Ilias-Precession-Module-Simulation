@@ -19,6 +19,7 @@ using UnityEngine.SceneManagement;
 //   Module → Add precession vector  (step 4a, once) ω⃗_P on the vertical axis, centred on the arc
 //   Module → Add precession cone    (step 4a, rerunnable) cone swept by the figure axis, ω_P label; arc and vector off by default
 //   Module → Add nutation cones     (step 4b, rerunnable) Nutations-, Rastpol-, Gangpolkegel for the balanced gyroscope
+//   Module → Use module web bridge  (step 5, rerunnable) the WebBridge object talks to the module controller
 // The flat look of the first version is commit a435b47.
 public static class ModuleSceneSetup {
     private const string SourceScene = "Assets/Scenes/SampleScene.unity";
@@ -532,6 +533,50 @@ public static class ModuleSceneSetup {
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
         Debug.Log("Nutation cones added.");
+    }
+
+
+    // step 5: the original's WebBridge component on the copied WebBridge object points to the removed GyroscopeController,
+    // so it is swapped for ModuleWebBridge. The object keeps its name (the template's SendMessage target) and its
+    // SimulationTime (also used by the inactive uGUI panel). Rerunnable: rewires the references.
+    [MenuItem("Module/Use module web bridge")]
+    private static void UseModuleWebBridge() {
+        Scene scene = SceneManager.GetActiveScene();
+        if (scene.path != ModuleScenePath) {
+            EditorUtility.DisplayDialog("Module scene", $"Open {ModuleScenePath} first.", "OK");
+            return;
+        }
+        Transform helpers = FindInScene(scene, "Helpers");
+        if (helpers == null) {
+            EditorUtility.DisplayDialog("Module scene", "Run Module → Add helpers first.", "OK");
+            return;
+        }
+
+        Transform bridgeObject = FindInScene(scene, "WebBridge");
+        if (bridgeObject == null) {
+            bridgeObject = new GameObject("WebBridge").transform;
+            SceneManager.MoveGameObjectToScene(bridgeObject.gameObject, scene);
+        }
+        GameObject go = bridgeObject.gameObject;
+        go.SetActive(true);                                                     // SendMessage only finds active objects
+        var oldBridge = go.GetComponent<WebBridge>();
+        if (oldBridge != null) Object.DestroyImmediate(oldBridge);
+        // not "??": it skips Unity's overloaded == null (in the editor GetComponent may return a "fake null" object)
+        var simTime = go.GetComponent<SimulationTime>();
+        if (simTime == null) simTime = go.AddComponent<SimulationTime>();
+        var bridge = go.GetComponent<ModuleWebBridge>();
+        if (bridge == null) bridge = go.AddComponent<ModuleWebBridge>();
+
+        var so = new SerializedObject(bridge);
+        so.FindProperty("controller").objectReferenceValue = FindInScene(scene, "Gyroscope").GetComponent<ModuleGyroscopeController>();
+        so.FindProperty("helpers").objectReferenceValue = helpers.GetComponent<ModuleHelpers>();
+        so.FindProperty("simTime").objectReferenceValue = simTime;
+        so.ApplyModifiedPropertiesWithoutUndo();
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Selection.activeGameObject = go;
+        Debug.Log("WebBridge uses ModuleWebBridge now.");
     }
 
 

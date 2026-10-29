@@ -1,8 +1,8 @@
 using UnityEngine;
 
 
-// The three cones of the force-free (balanced) gyroscope, apex at the pivot, all with the same slant length (longer
-// than the precession cone, see length):
+// The three cones of the force-free (balanced) gyroscope, apex at the pivot, each with its own slant length so the
+// rims stand apart (the widest is the shortest, the thin ones reach beyond it):
 //   Nutationskegel  around L⃗, through the figure axis: the path of the axle around the fixed L⃗
 //   Rastpolkegel    around L⃗, through ω⃗: fixed in space, the path of the instantaneous axis of rotation
 //   Gangpolkegel    around the figure axis, through ω⃗: fixed in the body, rolls on the Rastpolkegel; ω⃗ is the line
@@ -16,9 +16,11 @@ public class NutationCones : MonoBehaviour {
     [SerializeField] private HelperCone spaceCone;                              // Rastpolkegel
     [SerializeField] private HelperCone bodyCone;                               // Gangpolkegel
     [SerializeField] private float minAngleDeg = 0.5f;                          // below: a line, not a cone
-    [SerializeField] private float length = 0.30f;                              // m, apex to rim; only on the lab gyroscope
-                                                                                // (balanced): well beyond the wheel (centre
-                                                                                // 0.12 m, radius 0.12 m), which hides cones inside it
+    // m, apex to rim; only on the lab gyroscope (balanced): well beyond the wheel (centre 0.12 m, radius 0.12 m), which
+    // hides cones inside it
+    [SerializeField] private float nutationLength = 0.25f;
+    [SerializeField] private float spaceLength = 0.35f;
+    [SerializeField] private float bodyLength = 0.45f;
 
 
     void LateUpdate() {
@@ -32,14 +34,14 @@ public class NutationCones : MonoBehaviour {
         if (Vector3.Dot(axis, l) < 0) axis = -axis;                             // the half on L⃗'s side (lab: the wheel)
 
         Vector3 pivot = controller.transform.position;
-        Place(nutationCone, pivot, l, Vector3.Angle(l, axis));
-        Place(spaceCone, pivot, l, Vector3.Angle(l, omega));
-        Place(bodyCone, pivot, axis, Vector3.Angle(axis, omega));
+        Place(nutationCone, pivot, l, Vector3.Angle(l, axis), nutationLength);
+        Place(spaceCone, pivot, l, Vector3.Angle(l, omega), spaceLength);
+        Place(bodyCone, pivot, axis, Vector3.Angle(axis, omega), bodyLength);
     }
 
 
-    // cone around the given axis with the given half angle (deg)
-    private void Place(HelperCone cone, Vector3 apex, Vector3 axis, float halfAngleDeg) {
+    // cone around the given axis with the given half angle (deg) and slant length (m)
+    private void Place(HelperCone cone, Vector3 apex, Vector3 axis, float halfAngleDeg, float length) {
         if (!cone.gameObject.activeInHierarchy) return;                         // switched off
         cone.SetVisible(halfAngleDeg >= minAngleDeg);
         float a = halfAngleDeg * Mathf.Deg2Rad;
