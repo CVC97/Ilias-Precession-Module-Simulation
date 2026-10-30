@@ -160,6 +160,15 @@ public class GyroscopeModel {
     }
 
 
+    // continue from a state taken over from another model (other spin or add-on weight): like the initial conditions,
+    // but the axle keeps its azimuth φ and the wheel its angle ψ
+    public void SetState(double theta, double phi, double psi, double thetaDot, double phiDot, double omega3) {
+        SetInitialConditions(theta, thetaDot, phiDot, omega3);
+        state.Phi = phi;
+        state.Psi = psi;
+    }
+
+
     // push against the axle at the current state: changes θ̇ and φ̇ by the given amounts. The push acts perpendicular
     // to the figure axis, so the spin ω3 (p_ψ) stays; p_φ changes because the push has a torque about the vertical.
     public void Push(double deltaThetaDot, double deltaPhiDot) {

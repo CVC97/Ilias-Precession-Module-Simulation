@@ -36,7 +36,8 @@ public class ModuleStateMessage {
     public string source = "precession-sim";
     public string type = "state";
     public int run;                                                             // +1 on every restart
-    public float time;                                                          // s of simulated time since the restart
+    public int segment;                                                         // +1 on every restart and rpm/weight/θ₀ change
+    public float time;                                                       // s of simulated time since the restart
     public string apparatus;
     public float thetaDeg;
     public float phiDeg;                                                        // precession angle, continuous (not wrapped)
@@ -133,6 +134,7 @@ public class ModuleWebBridge : MonoBehaviour {
         sinceState = 0f;
 
         state.run = controller.Run;
+        state.segment = controller.Segment;
         state.time = (float)controller.SimTime;
         state.apparatus = controller.SelectedApparatus == ModuleGyroscopeController.Apparatus.Lab ? "lab" : "top";
         state.thetaDeg = (float)(controller.Theta * Mathf.Rad2Deg);

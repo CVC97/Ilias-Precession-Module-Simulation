@@ -4,8 +4,9 @@ using UnityEngine;
 
 // Runs the gyroscope in the module scene: the lab gyroscope or the simple top (one build, the page chooses), with
 // parameters in lab language, released or guided start, push, friction.
-// The setters only note a change; the simulation restarts once in the next FixedUpdate. A whole preset from the page
-// (step 5) therefore costs one restart, not one per value.
+// The setters only note a change, applied once in the next FixedUpdate, so a whole preset from the page (step 5) costs
+// one restart, not one per value. Apparatus and start mode restart; Drehzahl, Zusatzgewicht and Neigung continue the
+// running gyroscope from where it is (ContinueSimulation).
 public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public enum Apparatus { Lab, SimpleTop }                                    // Versuchskreisel / einfacher Kreisel
     public enum StartMode { Released, Guided }                                  // losgelassen / geführt
@@ -41,6 +42,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     private GyroscopeModel gyroscope;
     private VectorDisplay vectors;
     private bool resetPending;
+    private bool changePending;                                                 // rpm, weight or θ₀: continue, no restart
+    private bool tiltPending;                                                   // θ₀ changed: the axle goes to the new tilt
     private bool pushPending;
     private double e0, spinEnergy0;
     private float displaySpinDeg;
@@ -62,6 +65,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     public double SimTime { get; private set; }                                 // s since the last restart, simulated time
     public int Run { get; private set; }                                        // counts restarts: the page sees when a new run begins
+    public int Segment { get; private set; }                                    // counts restarts and parameter changes
 
     // θ as the page and the Inspector use it: angle between L⃗ (wheel side) and the vertical, as in the module text
     // (dφ = dL/(L sin θ)). The model's figure axis points to the side where the torque acts, on the lab gyroscope the
@@ -85,17 +89,18 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     public void SetRpm(float value) {
         rpm = value;
-        resetPending = true;
+        changePending = true;
     }
 
     public void SetAddOnMassGrams(float value) {
         addOnMassGrams = value;
-        resetPending = true;
+        changePending = true;
     }
 
     public void SetTheta0Deg(float value) {
         theta0Deg = value;
-        resetPending = true;
+        changePending = true;
+        tiltPending = true;
     }
 
     public void SetStartMode(StartMode value) {
@@ -153,12 +158,45 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
         e0 = gyroscope.Energy;
         spinEnergy0 = 0.5 * p.I3 * omega3*omega3;
-        resetPending = false;
+        resetPending = changePending = tiltPending = false;
         SimTime = 0;
         Run++;
+        Segment++;
 
         ApplyPose();
         if (rig.Trail != null) rig.Trail.Clear();
+    }
+
+
+    // Drehzahl, Zusatzgewicht or Neigung changed while the gyroscope runs: it goes on from where it is (azimuth, wheel
+    // angle, θ̇), with the new values; a new θ₀ tilts the axle at its current azimuth. Guided stays guided: φ̇ shifts by
+    // the change of the steady precession rate, so a calm precession stays calm (ω_P steady at once), and any nodding
+    // keeps its deviation from it (the balanced gyroscope keeps nutating after a push). SimTime and the trail go on.
+    private void ContinueSimulation() {
+        ApparatusRig rig = Rig;
+        ApparatusParameters p = rig.Parameters;
+        GyroscopeModel before = gyroscope;
+
+        double addOnMass = addOnMassGrams / 1000.0;
+        gyroscope = GyroscopeModel.FromInertia(p.I1(addOnMass), p.I3, p.TorqueConst(addOnMass));
+        gyroscope.FrictionCoeff = friction ? p.FrictionCoeff : 0;
+
+        double omega3 = p.SpinSign * Mathf.Min(rpm, p.MaxRpm) * 2*Math.PI / 60;
+        double theta = tiltPending
+            ? ThetaOfL(Mathf.Clamp(theta0Deg, rig.MinTheta0Deg, rig.MaxTheta0Deg) * Math.PI / 180)
+            : before.Theta;
+        double phiDot = before.PhiDot;
+        if (startMode == StartMode.Guided) {
+            double steadyBefore = before.SteadyPrecessionRate(before.Theta, before.Omega3);
+            double steadyAfter = gyroscope.SteadyPrecessionRate(theta, omega3);
+            if (!double.IsNaN(steadyBefore) && !double.IsNaN(steadyAfter)) phiDot += steadyAfter - steadyBefore;
+        }
+        gyroscope.SetState(theta, before.Phi, before.Psi, before.ThetaDot, phiDot, omega3);
+
+        e0 = gyroscope.Energy;
+        spinEnergy0 = 0.5 * p.I3 * omega3*omega3;
+        changePending = tiltPending = false;
+        Segment++;
     }
 
 
@@ -183,6 +221,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     void FixedUpdate() {
         if (resetPending) {
             ResetSimulation();
+        } else if (changePending) {
+            ContinueSimulation();
         }
         if (pushPending) {
             gyroscope.Push(pushThetaDot, pushPhiDot);
@@ -197,9 +237,13 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
 
     void Update() {
-        // paused (time scale 0): no FixedUpdate, but a new preset or Neustart should show at once
-        if (resetPending && Time.timeScale == 0f) {
-            ResetSimulation();
+        // paused (time scale 0): no FixedUpdate, but a new preset, Neustart or a new tilt should show at once
+        if (Time.timeScale == 0f) {
+            if (resetPending) {
+                ResetSimulation();
+            } else if (changePending) {
+                ContinueSimulation();
+            }
         }
         UpdateDisplaySpin();
         ApplyPose();

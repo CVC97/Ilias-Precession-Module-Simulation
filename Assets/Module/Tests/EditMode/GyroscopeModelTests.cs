@@ -168,4 +168,26 @@ public class GyroscopeModelTests {
         Assert.That(model.PhiDot, Is.EqualTo(phiDot - 0.3).Within(1e-12));
         Assert.That(model.Omega3, Is.EqualTo(Omega3).Within(1e-12));
     }
+
+
+    // a slider change in the module continues the run (ModuleGyroscopeController.ContinueSimulation): the axle keeps
+    // its azimuth and, guided at the new steady rate, precesses on calmly at twice the spin, half the rate
+    [Test]
+    public void ContinuedStateKeepsAzimuthAndGuidedPrecession() {
+        var model = GyroscopeModel.FromInertia(I1, I3, Loaded);
+        model.SetInitialConditions(Horizontal, 0, model.SteadyPrecessionRate(Horizontal, Omega3), Omega3);
+        Run(model, 3, 1e-3);
+        double phi = model.Phi, psi = model.Psi;
+
+        var continued = GyroscopeModel.FromInertia(I1, I3, Loaded);
+        continued.SetState(Horizontal, phi, psi, 0, continued.SteadyPrecessionRate(Horizontal, 2 * Omega3), 2 * Omega3);
+        double maxDeviation = 0;
+        Assert.That(continued.Phi, Is.EqualTo(phi));
+        Assert.That(continued.Psi, Is.EqualTo(psi));
+
+        Run(continued, 5, 1e-3, t => maxDeviation = Math.Max(maxDeviation, Math.Abs(continued.Theta - Horizontal)));
+
+        Assert.That(maxDeviation, Is.LessThan(1e-9));
+        Assert.That(continued.PhiDot, Is.EqualTo(model.PhiDot / 2).Within(1e-3 * model.PhiDot));
+    }
 }
