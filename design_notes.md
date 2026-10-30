@@ -174,4 +174,4 @@ Tools/                         package-module-build.sh, bridge-test.html
 - Optional: a body-fixed marker on the Gangpolkegel to show the rolling; "x-ray" for arrow parts hidden behind the wheel (needs a RenderObjects feature); the soft horizon line of the module floor.
 - Build size (~18 MB): the Unity logo texture (2.7 MB) is still in the module data although the splash is off (maybe the hidden *Show Unity Logo* flag); URP film grain textures and ProBuilder/TMP are project-wide.
 - From the module's QA list (sim side): no touch rotation on phones/tablets; the mouse wheel over the sim zooms instead of scrolling the page; p7's light grey trail has weak contrast on the light stage; on p4 at 1000 rpm the disk can hide the short arrows in some phases.
-- The pending change `preloadedAssets: []` in *Web - Module - Release* came from Unity (Input System asset no longer preloaded); check that keyboard/mouse input still works in the next module build before committing it.
+- Unity set `preloadedAssets: []` in *Web - Module - Release* (Input System asset no longer preloaded, committed as `5e714b8`); check that mouse input (camera) still works in the next module build.
