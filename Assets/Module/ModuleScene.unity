@@ -1168,8 +1168,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OrbitCamera
   target: {fileID: 7564714996556904997}
   targetOffset: {x: 0, y: -0.08, z: 0}
-  yaw: 0
-  pitch: 20
+  yaw: 50
+  pitch: 35
   distance: 1.1
   minPitch: -10
   maxPitch: 85

@@ -227,6 +227,8 @@ public static class ModuleSceneSetup {
         // camera for the larger apparatus
         var orbit = new SerializedObject(FindInScene(scene, "Main Camera").GetComponent<OrbitCamera>());
         orbit.FindProperty("targetOffset").vector3Value = new Vector3(0f, -0.08f, 0f);
+        orbit.FindProperty("yaw").floatValue = 50f;                             // the start pose (φ = 0) is side-on, not along the axle
+        orbit.FindProperty("pitch").floatValue = 35f;                           // from above: the precession circle reads as a circle
         orbit.FindProperty("distance").floatValue = 1.1f;
         orbit.FindProperty("minDistance").floatValue = 0.6f;
         orbit.FindProperty("maxDistance").floatValue = 2.0f;
