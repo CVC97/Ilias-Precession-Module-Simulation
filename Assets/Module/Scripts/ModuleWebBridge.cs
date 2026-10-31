@@ -12,7 +12,7 @@ public class ModulePreset {
     public float addOnMassGrams = 30f;                                          // lab only
     public float theta0Deg = 90f;                                               // θ₀ of L⃗, clamped per apparatus
     public string startMode = "guided";                                         // "guided" | "released"
-    public bool friction = false;
+    public float frictionFactor = 0f;                                           // Lagerreibung, × the lab value (0 = none)
     public float pushThetaDot = 0.5f;                                           // rad/s, strength of the Stoß
     public float pushPhiDot = 0f;                                               // rad/s
     public float timeScale = 1f;
@@ -86,7 +86,7 @@ public class ModuleWebBridge : MonoBehaviour {
         controller.SetRpm(preset.rpm);
         controller.SetAddOnMassGrams(preset.addOnMassGrams);
         controller.SetTheta0Deg(preset.theta0Deg);
-        controller.SetFriction(preset.friction);
+        controller.SetFriction(preset.frictionFactor);
         controller.SetPush(preset.pushThetaDot, preset.pushPhiDot);
         controller.Restart();                                                   // also if no value changed: a preset is a fresh start
 
@@ -111,7 +111,7 @@ public class ModuleWebBridge : MonoBehaviour {
     public void SetRpm(float value) => controller.SetRpm(value);
     public void SetAddOnMassGrams(float value) => controller.SetAddOnMassGrams(value);
     public void SetTheta0Deg(float value) => controller.SetTheta0Deg(value);
-    public void SetFriction(float on) => controller.SetFriction(on > 0.5f);
+    public void SetFriction(float factor) => controller.SetFriction(factor);     // 0/1 from older pages: off / lab value
     public void SetTimeScale(float value) => simTime.SetTimeScale(value);
     public void SetPaused(float on) => simTime.SetPaused(on > 0.5f);
     public void Restart() => controller.Restart();

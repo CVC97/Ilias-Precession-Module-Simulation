@@ -81,7 +81,7 @@ Two apparatus in one build, chosen by the page's preset (learning path lab → s
 
 | | Lab gyroscope (`LabGyroscope.asset`) | Simple top (`SimpleTop.asset`) |
 |---|---|---|
-| Parameters (lab values rounded generously, `experimental.md`) | I₃ ≈ 0.01 kg m² (wheel 1.3 kg, R 0.12 m); I₁ ≈ 0.05 kg m² + m_z r²; counterweight 0.9 kg at 0.17 m; notch r = 0.27 m; k = m_z g r; friction c = I₃/τ, τ = 120 s | disk 1 kg, R 0.10 m, lever arm 0.167 m (the original's proportions), k = m g l |
+| Parameters (lab values rounded generously, `experimental.md`) | I₃ ≈ 0.01 kg m² (wheel 1.3 kg, R 0.12 m); I₁ ≈ 0.05 kg m² + m_z r²; counterweight 0.9 kg at 0.17 m; notch r = 0.27 m; k = m_z g r; friction c = f · I₃/τ, τ = 120 s, factor f from the page (0 = none, 1 = lab) | disk 1 kg, R 0.10 m, lever arm 0.167 m (the original's proportions), k = m g l |
 | Limits | 800 rpm; θ₀ 60–120° (beyond, the wheel hits the stand) | 3000 rpm; θ₀ 20–100°; no collision handling (below ~600 rpm it falls through its tower) |
 | Spin sign | −1: L⃗ points from the pivot through the wheel, as in textbook figures | +1 |
 | Typical times | 30 g, 400 rpm: T_P ≈ 31 s; balanced: T_N ≈ 0.8 s | 2400 rpm, 60°: T_P ≈ 4.8 s |
@@ -114,6 +114,7 @@ module page ◄── postMessage {source:'precession-sim', type:'ready' | 'stat
 ```
 
 - iframe on the same origin (`<base>/sim/`): freeing the WebGL context by removing the iframe is reliable, origin checks are trivial, no third-party host (GDPR).
+- **Friction is a factor** f of the apparatus' lab value (`SetFriction(f)`, preset key `frictionFactor`, no restart; the page's "Lagerreibung" slider 0–5 ×). Until v1.1.0 it was on/off; an old page's 1 still means the lab value, and its old key `friction` is ignored.
 - `ApplyPreset(json)` is a **complete** state (missing keys take the class defaults, not the previous values; the default helpers are on), always one restart. `SetHelpers` is partial. State at 10 Hz real time, also while paused: `run, segment, time, apparatus, thetaDeg, phiDeg, phiDot, omegaR, omegaP, addOnMassGrams, paused, spinLimited`.
 - The GameObject keeps the name `WebBridge` (SendMessage target); *Use module web bridge* swaps the original's component for `ModuleWebBridge` in the module scene only.
 - Full contract as the page uses it: the module's `design_notes.md`, section 4. Keep both in sync when commands or state fields change. Test page without the module: `Tools/bridge-test.html`.

@@ -19,7 +19,7 @@ public class LabGyroscope : ApparatusParameters {
     [Header("Add-on weight")]
     [SerializeField] private float notchDistance = 0.27f;                   // m, notch from the pivot (0.272)
 
-    [Header("Bearing friction (when switched on)")]
+    [Header("Bearing friction at factor 1 (the page's slider scales it)")]
     [SerializeField] private float spinDecayTime = 120f;                    // s, time constant of the spin ω_R
 
     [Header("Spin up with the cord")]

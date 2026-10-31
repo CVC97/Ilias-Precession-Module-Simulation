@@ -12,7 +12,7 @@ public class SimpleTop : ApparatusParameters {
     [SerializeField] private float diskRadius = 0.10f;                      // m
     [SerializeField] private float leverArm = 0.167f;                       // m, disk centre from the pivot
 
-    [Header("Bearing friction (when switched on)")]
+    [Header("Bearing friction at factor 1 (the page's slider scales it)")]
     [SerializeField] private float spinDecayTime = 120f;                    // s
 
     [Header("Spin")]

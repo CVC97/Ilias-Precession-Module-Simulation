@@ -96,7 +96,7 @@
       SetRpm: "number",
       SetAddOnMassGrams: "number",
       SetTheta0Deg: "number",     // θ₀ of L⃗
-      SetFriction: "bool",        // no restart
+      SetFriction: "number",      // factor × the lab friction, 0 = none; no restart (true/false from older pages: 1/0)
       SetTimeScale: "number",
       SetPaused: "bool",
       Restart: "none",
@@ -114,8 +114,8 @@
         window.unityInstance.SendMessage("WebBridge", cmd, String(value));
       } else if (kind === "bool") {
         window.unityInstance.SendMessage("WebBridge", cmd, value ? 1 : 0);
-      } else if (Number.isFinite(value)) {
-        window.unityInstance.SendMessage("WebBridge", cmd, value);
+      } else if (Number.isFinite(typeof value === "boolean" ? +value : value)) {
+        window.unityInstance.SendMessage("WebBridge", cmd, +value);
       } else {
         console.warn("precession-sim: " + cmd + " needs a number, got", value);
       }

@@ -8,7 +8,7 @@ public abstract class ApparatusParameters : ScriptableObject {
     public abstract double I3 { get; }                              // kg·m², about the figure axis
     public abstract double I1(double addOnMass);                    // kg·m², about a horizontal axis through the pivot
     public abstract double TorqueConst(double addOnMass);           // N·m, D = k sinθ
-    public abstract double FrictionCoeff { get; }                   // N·m·s, bearing torque −c ψ̇ (when switched on)
+    public abstract double FrictionCoeff { get; }                   // N·m·s, bearing torque −c ψ̇ at friction factor 1
 
     // sign of ω3 for which L points from the pivot through the wheel (textbook picture)
     public abstract int SpinSign { get; }

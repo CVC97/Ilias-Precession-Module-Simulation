@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 
 // Runs the gyroscope in the module scene: the lab gyroscope or the simple top (one build, the page chooses), with
@@ -21,7 +22,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     [SerializeField, Range(0f, 60f)] private float addOnMassGrams = 30f;        // Zusatzgewicht (lab only)
     [SerializeField, Range(10f, 120f)] private float theta0Deg = 90f;           // Neigung θ₀ of L⃗ (see Theta); clamped to the apparatus' limits
     [SerializeField] private StartMode startMode = StartMode.Guided;
-    [SerializeField] private bool friction = false;                             // Reibung
+    [FormerlySerializedAs("friction")]                                          // was an on/off bool (0/1) up to v1.1.0
+    [SerializeField, Range(0f, 10f)] private float frictionFactor = 0f;         // Lagerreibung: 0 = none, 1 = the apparatus' lab value
 
     [Header("Push (Stoß)")]
     [SerializeField] private float pushThetaDot = 0.5f;                         // rad/s, knock on the axle from above/below
@@ -59,7 +61,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public float AddOnMassGrams => addOnMassGrams;
     public float Theta0Deg => theta0Deg;
     public StartMode SelectedStartMode => startMode;
-    public bool Friction => friction;
+    public float FrictionFactor => frictionFactor;
     public float PushThetaDot => pushThetaDot;
     public float PushPhiDot => pushPhiDot;
 
@@ -108,11 +110,14 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         resetPending = true;
     }
 
-    // no restart: friction can be switched on while the gyroscope runs (measure T_R before and after)
-    public void SetFriction(bool on) {
-        friction = on;
-        if (gyroscope != null) gyroscope.FrictionCoeff = on ? Rig.Parameters.FrictionCoeff : 0;
+    // no restart: the friction changes while the gyroscope runs (measure T_R before and after).
+    // factor × the apparatus' lab value (τ = 120 s); 1 is what the on/off switch of v1.1.0 gave.
+    public void SetFriction(float factor) {
+        frictionFactor = Mathf.Max(0f, factor);
+        if (gyroscope != null) gyroscope.FrictionCoeff = FrictionCoeff(Rig.Parameters);
     }
+
+    private double FrictionCoeff(ApparatusParameters p) => frictionFactor * p.FrictionCoeff;
 
     [ContextMenu("Neustart")]
     public void Restart() {
@@ -141,7 +146,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
         double addOnMass = addOnMassGrams / 1000.0;
         gyroscope = GyroscopeModel.FromInertia(p.I1(addOnMass), p.I3, p.TorqueConst(addOnMass));
-        gyroscope.FrictionCoeff = friction ? p.FrictionCoeff : 0;
+        gyroscope.FrictionCoeff = FrictionCoeff(p);
 
         // spin sense chosen so that L points from the pivot through the wheel
         double omega3 = p.SpinSign * Mathf.Min(rpm, p.MaxRpm) * 2*Math.PI / 60;
@@ -179,7 +184,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
         double addOnMass = addOnMassGrams / 1000.0;
         gyroscope = GyroscopeModel.FromInertia(p.I1(addOnMass), p.I3, p.TorqueConst(addOnMass));
-        gyroscope.FrictionCoeff = friction ? p.FrictionCoeff : 0;
+        gyroscope.FrictionCoeff = FrictionCoeff(p);
 
         double omega3 = p.SpinSign * Mathf.Min(rpm, p.MaxRpm) * 2*Math.PI / 60;
         double theta = tiltPending
