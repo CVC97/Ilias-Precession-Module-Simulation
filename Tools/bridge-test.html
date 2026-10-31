@@ -47,6 +47,7 @@
         <label>rpm <input id="rpm" type="range" min="0" max="800" step="10" value="400"> <span id="rpmValue">400</span></label>
         <label><input id="trail" type="checkbox" checked> trail (SetHelpers)</label>
         <label>friction × <input id="friction" type="range" min="0" max="5" step="0.5" value="0"> <span id="frictionValue">0</span></label>
+        <label>push θ̇ <input id="pushThetaDot" type="range" min="0" max="4" step="0.5" value="0.5"> <span id="pushThetaDotValue">0.5</span> rad/s</label>
         <button id="bad">unknown command</button>
         <button id="badJson">malformed JSON</button>
       </section>
@@ -116,6 +117,11 @@
     friction.addEventListener("input", () => {
       document.querySelector("#frictionValue").textContent = friction.value;
       send("SetFriction", Number(friction.value));               // no restart: follow while dragging
+    });
+    const pushThetaDot = document.querySelector("#pushThetaDot");
+    pushThetaDot.addEventListener("input", () => {
+      document.querySelector("#pushThetaDotValue").textContent = pushThetaDot.value;
+      send("SetPushThetaDot", Number(pushThetaDot.value));       // strength of the next Push, no restart
     });
     document.querySelector("#bad").addEventListener("click", () => send("SetSnow", 1));       // iframe console: unknown command
     document.querySelector("#badJson").addEventListener("click", () => send("ApplyPreset", "{rpm:"));   // Unity log: ignored

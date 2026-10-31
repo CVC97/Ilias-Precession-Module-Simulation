@@ -114,6 +114,9 @@ public class ModuleWebBridge : MonoBehaviour {
     public void SetFriction(float factor) => controller.SetFriction(factor);     // 0/1 from older pages: off / lab value
     public void SetTimeScale(float value) => simTime.SetTimeScale(value);
     public void SetPaused(float on) => simTime.SetPaused(on > 0.5f);
+    // strength of the next Stoß, rad/s, no restart (before v1.3.0 only through ApplyPreset)
+    public void SetPushThetaDot(float value) => controller.SetPush(value, controller.PushPhiDot);
+    public void SetPushPhiDot(float value) => controller.SetPush(controller.PushThetaDot, value);
     public void Restart() => controller.Restart();
     public void Push() => controller.Push();
 
