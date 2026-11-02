@@ -23,6 +23,8 @@ public class GyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     public bool SpinDisplayLimited { get; private set; }
 
     [SerializeField] private TrailRenderer trail;
+    [SerializeField] private int trailSamplesPerStep = 8;                       // the pose changes at only 50 Hz, too coarse for the 8 Hz nutation
+    private Vector3 trailTipLocal, lastTrailPoint;
 
 
     [SerializeField] private Transform rotor;
@@ -69,6 +71,14 @@ public class GyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
         ApplyPose();                          // safe now: no time step in it
         if (trail != null) trail.Clear();
+        lastTrailPoint = Vector3.positiveInfinity;                              // the next sample always counts
+    }
+
+
+    void Awake() {
+        if (trail != null) {
+            trailTipLocal = transform.InverseTransformPoint(trail.transform.position);  // for AddTrailPoint
+        }
     }
 
 
@@ -86,6 +96,7 @@ public class GyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     void FixedUpdate() {
         double h = (double)Time.fixedDeltaTime / substeps;                      // effective dt
+        int trailInterval = Mathf.Max(1, substeps / trailSamplesPerStep);       // substeps between two trail samples
         // performing the numerical integration using the appropriate integrator for all substeps
         for (int i = 0; i < substeps; i++) {
             switch (integrator) {
@@ -97,6 +108,9 @@ public class GyroscopeController : MonoBehaviour, IGyroscopeModelSource {
                     break;
                 default:
                     break;
+            }
+            if ((i + 1) % trailInterval == 0) {
+                AddTrailPoint();
             }
         }
         // simulation logging
@@ -131,18 +145,35 @@ public class GyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     }
 
 
-    private void ApplyPose() {
+    // tip of the axle at the current model state, also between two poses; skips points closer than minVertexDistance.
+    // Emitting stays on: points added while it is off are not part of the visible trail. The automatic point at the
+    // pose adds nothing, because the last sample of a physics step lies at the pose.
+    private void AddTrailPoint() {
+        if (trail == null) return;
+        Vector3 point = transform.position + ModelRotation() * trailTipLocal;
+        if ((point - lastTrailPoint).sqrMagnitude < trail.minVertexDistance * trail.minVertexDistance) return;
+        trail.AddPosition(point);
+        lastTrailPoint = point;
+    }
+
+
+    private Quaternion ModelRotation() {
         // model angles (rad, right-handed) → Unity degrees (left-handed: sign flip)
         float thetaDeg = PhysicsToUnity.Angle(gyroscope.Theta);
         float phiDeg = PhysicsToUnity.Angle(gyroscope.Phi);
         // float psiDeg = PhysicsToUnity.Angle(gyroscope.Psi);
 
+        Quaternion tilt = Quaternion.AngleAxis(thetaDeg, Vector3.right);        // around the x axis
+        Quaternion precession = Quaternion.AngleAxis(phiDeg, Vector3.up);       // around the vertical axis
+        return precession * tilt;
+    }
+
+
+    private void ApplyPose() {
         // rotor
         rotor.localRotation = Quaternion.AngleAxis(displaySpinDeg, Vector3.up);         // around the vertical axis
 
         // gyroscope
-        Quaternion tilt = Quaternion.AngleAxis(thetaDeg, Vector3.right);        // around the x axis
-        Quaternion precession = Quaternion.AngleAxis(phiDeg, Vector3.up);       // around the vertical axis
-        transform.localRotation = precession * tilt;
+        transform.localRotation = ModelRotation();
     }
 }

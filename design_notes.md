@@ -63,6 +63,8 @@ Physics notes worth knowing:
 
 - **Toy top on a tip** (disk 6 cm, axle 10 cm, pivot ball), chosen over the lab's horizontal gyroscope for the standalone demo.
 - **Noir look** ("Sin City"): black stage, spotlight pool with hard shadows, camera-relative rim light, black-and-white metal, colour only for the red marker and the arrows (L yellow, ω white, D red, emissive with bloom), film grain, vignette, snow that only lights up in the cone (particles run on game time, so pause freezes them). Arrows are URP Lit with black base + HDR emission: the editor-only `SimpleDots` test shader had made them pink in the build.
+- **Labels L⃗, ω⃗, D⃗** (menu *Noir → Add vector labels*, `Assets/Editor/NoirSceneSetup.cs`): the module's `VectorLabel` and typesetting in the arrows' colours, at the same size on screen. Differences: black halo instead of white (a white one would swallow the white ω⃗ on the black stage), and ω⃗ sits beside its tip, because L⃗ and ω⃗ are nearly collinear with a fixed length ratio (0.156 vs. 0.126 m at 3000 rpm), so their tips close up at low rpm.
+- **Trail fed from the integration, not from the pose:** a released top at 3000 rpm nutates at 8.3 Hz with cusps, while the pose changes only at the physics rate (50 Hz), so an automatic trail gets about 6 points per nutation and looks like a jagged polygon. `GyroscopeController` adds 8 points per physics step with `TrailRenderer.AddPosition`, skipping points closer than `minVertexDistance`. `emitting` must stay on: with it off the trail disappeared without any error. The look (grey instead of white, rounded corners) is menu *Noir → Apply trail look*.
 - **Controls stay uGUI** in the standalone build. An HTML UI in the template was considered and dropped: the module needs Angular components anyway, so it would have been built twice; only the bridge is reused.
 - `WebBridge` (`SetRpm`, `SetTheta0`, `SetPhiDot0`, `SetTimeScale`, `SetPaused`, `Restart`, `SetShow*`, `SetSnow`) is the JS → C# entry for console tests; `hideUguiInBrowser` stays off.
 - Template `Precession`: full-window canvas at devicePixelRatio (capped at 2), noir loading screen, German error text, `window.unityInstance`. The template thumbnail follows Unity's PWA style (`Design/thumbnail.svg`, outside `Assets/` so it isn't copied into builds).
@@ -93,7 +95,7 @@ Two apparatus in one build, chosen by the page's preset (learning path lab → s
 
 ### Look ("studio", Carlo)
 
-A flat light look was tried first and rejected as lacking the polished feel. Now: soft warm spot + cool rim light, metal wheel and axle with a small studio reflection cubemap (128 px, `Assets/Module/Textures`), blue lacquered base, light floor fading into fog of the stage colour, gentle post (neutral tonemapping, contrast +20, bloom 0.2, blue vignette). Smooth 96-sided cylinders replace the faceted built-in ones. URP shadow distance 1 → 3 m project-wide (approved; harmless for the original). One light theme; `?theme=dark` only darkens the loading screen.
+A flat light look was tried first and rejected as lacking the polished feel. Now: soft warm spot + cool rim light, metal wheel and axle with a small studio reflection cubemap (128 px, `Assets/Module/Textures`), matt dark gray base (colour means physical quantity, so apparatus takes no vector's colour), light floor fading into fog of the stage colour, gentle post (neutral tonemapping, contrast +20, bloom 0.2, blue vignette). Smooth 96-sided cylinders replace the faceted built-in ones. URP shadow distance 1 → 3 m project-wide (approved; harmless for the original). One light theme; `?theme=dark` only darkens the loading screen.
 
 ### Helpers (switchboard `ModuleHelpers`, 13 flags)
 
@@ -154,10 +156,11 @@ module page ◄── postMessage {source:'precession-sim', type:'ready' | 'stat
 ```
 Assets/Scripts/Physics/        GyroscopeModel, Vec3d (assembly GyroscopePhysics, no Unity)
 Assets/Scripts/                GyroscopeController, SimulationTime, WebBridge (original); RotorSpin, PrecessionCone (early milestones, disabled)
-Assets/Scripts/View/           PhysicsToUnity, VectorDisplay, ArrowBase, VectorArrow(3D), ConeMesh, OrbitCamera, ControlPanel, SliderRow
+Assets/Scripts/View/           PhysicsToUnity, VectorDisplay, ArrowBase, VectorArrow(3D), VectorLabel, ConeMesh, OrbitCamera, ControlPanel, SliderRow
 Assets/Scripts/Testing/        ModelTest (console checks of the original model)
+Assets/Editor/                 NoirSceneSetup (menu Noir → …)
 Assets/Module/Scripts/         ModuleGyroscopeController, ApparatusParameters/LabGyroscope/SimpleTop, ApparatusRig, ModuleHelpers,
-                               HelperCone, PrecessionDisplay, NutationCones, VectorLabel, HangingWeight, PivotHead,
+                               HelperCone, PrecessionDisplay, NutationCones, HangingWeight, PivotHead,
                                ModuleWebBridge (+ DTOs), PrecessionArc/PrecessionVector (off)
 Assets/Module/Editor/          ModuleSceneSetup (menu Module → …)
 Assets/Module/Plugins/         ModuleBridge.jslib

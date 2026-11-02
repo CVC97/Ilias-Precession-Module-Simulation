@@ -634,12 +634,12 @@ public static class ModuleSceneSetup {
 
 
     // symbol with a small arrow above, via TextMeshPro rich text: step back over the letter, raise a small "→"
-    private static string VectorSymbol(string symbol, float arrowHeightEm) {
+    internal static string VectorSymbol(string symbol, float arrowHeightEm) {
         return $"<i>{symbol}</i><space=-0.55em><voffset={arrowHeightEm:0.##}em><size=55%>→</size></voffset>";
     }
 
 
-    private static TextMeshPro Label(Transform parent, string name, string text, Color color, Material material) {
+    internal static TextMeshPro Label(Transform parent, string name, string text, Color color, Material material) {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         var tmp = go.AddComponent<TextMeshPro>();
@@ -657,17 +657,21 @@ public static class ModuleSceneSetup {
     // drawn on top of everything. A soft white halo behind the glyphs (underlay) keeps the coloured symbols readable
     // over the dark wheel; an outline would grow into the thin italic strokes and wash out their colour.
     private static Material LabelOverlayMaterial() {
-        string path = $"{MaterialFolder}/ModuleLabel.mat";
+        return LabelOverlayMaterial($"{MaterialFolder}/ModuleLabel.mat", new Color(1f, 1f, 1f, 0.9f));
+    }
+
+
+    internal static Material LabelOverlayMaterial(string path, Color halo) {
         var mat = AssetDatabase.LoadAssetAtPath<Material>(path);
         if (mat == null) {
-            mat = new Material(TMP_Settings.defaultFontAsset.material) { name = "ModuleLabel" };
+            mat = new Material(TMP_Settings.defaultFontAsset.material);
             mat.shader = Shader.Find("TextMeshPro/Distance Field Overlay");
             AssetDatabase.CreateAsset(mat, path);
         }
         mat.DisableKeyword("OUTLINE_ON");
         mat.SetFloat("_OutlineWidth", 0f);
         mat.EnableKeyword("UNDERLAY_ON");
-        mat.SetColor("_UnderlayColor", new Color(1f, 1f, 1f, 0.9f));
+        mat.SetColor("_UnderlayColor", halo);
         mat.SetFloat("_UnderlayOffsetX", 0f);
         mat.SetFloat("_UnderlayOffsetY", 0f);
         mat.SetFloat("_UnderlayDilate", 0.6f);
@@ -796,14 +800,14 @@ public static class ModuleSceneSetup {
     private static void ApplyLook(Scene scene) {
         if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder(ModuleFolder, "Materials");
 
-        // materials: metal for the apparatus, lacquer in uni-blau-1 for the base, vectors in module colours
+        // materials: metal and dark gray for the apparatus (colour means physical quantity), vectors in module colours
         // Lit(source, name, colour, metallic, smoothness, emission = fraction of the colour that glows)
         var remap = new Dictionary<Material, Material> {
             [Original("Disk")] = Lit("Disk", "ModuleWheel", new Color32(170, 175, 182, 255), 0.9f, 0.4f),         // brushed aluminium (rough: the flat face mirrors the spot otherwise)
             [Original("Marker")] = Lit("Marker", "ModuleMarker", new Color32(35, 38, 45, 255), 0f, 0.5f),          // dark stripe
             [Original("Axle")] = Lit("Axle", "ModuleAxle", new Color32(215, 217, 220, 255), 1f, 0.7f),            // polished steel (not too glossy: glare at the pivot)
             [Original("Tower")] = Lit("Tower", "ModuleTower", new Color32(185, 190, 196, 255), 0.9f, 0.5f),        // satin aluminium
-            [Original("Base")] = Lit("Base", "ModuleBase", UniBlau1, 0.2f, 0.75f),                                 // blue lacquer
+            [Original("Base")] = Lit("Base", "ModuleBase", new Color32(35, 38, 45, 255), 0f, 0.25f),               // matt, gray of the pivot block
             [Original("Floor")] = Lit("Floor", "ModuleFloor", new Color32(232, 235, 240, 255), 0f, 0.3f),
             [Original("ArrowOmega")] = Unlit("ArrowOmega", "ModuleArrowOmega", UniBlau1),
             [Original("ArrowL")] = Unlit("ArrowL", "ModuleArrowL", UniBlau3),
@@ -1109,7 +1113,7 @@ public static class ModuleSceneSetup {
 
 
     // "Root/Child/Grandchild"; unlike GameObject.Find it also finds inactive objects
-    private static Transform FindInScene(Scene scene, string path) {
+    internal static Transform FindInScene(Scene scene, string path) {
         string[] parts = path.Split('/', 2);
         foreach (GameObject root in scene.GetRootGameObjects()) {
             if (root.name == parts[0]) {

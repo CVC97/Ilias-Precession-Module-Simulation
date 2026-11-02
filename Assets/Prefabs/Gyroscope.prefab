@@ -717,6 +717,7 @@ MonoBehaviour:
   substeps: 1000
   maxVisibleSpinRps: 5
   trail: {fileID: 2650303825647993974}
+  trailSamplesPerStep: 8
   rotor: {fileID: 6432785403768852930}
 --- !u!114 &121853131369797273
 MonoBehaviour:

@@ -10,6 +10,7 @@ using UnityEngine;
 public class VectorLabel : MonoBehaviour {
     [SerializeField] private VectorArrow3D arrow;
     [SerializeField] private float offset = 0.035f;                             // m beyond the tip, along the arrow
+    [SerializeField] private float sideOffset = 0f;                             // m beside the tip, across the arrow as seen on screen
 
     private TextMeshPro text;
     private Transform cam;
@@ -28,7 +29,8 @@ public class VectorLabel : MonoBehaviour {
             return;
         }
         Vector3 direction = (arrow.Tip - arrow.transform.position).normalized;
-        transform.position = arrow.Tip + direction * offset;
+        Vector3 side = Vector3.Cross(direction, cam.forward).normalized;        // zero while looking along the arrow
+        transform.position = arrow.Tip + direction * offset + side * sideOffset;
         transform.rotation = cam.rotation;                                      // billboard: parallel to the screen
     }
 }
