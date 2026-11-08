@@ -28,6 +28,9 @@ public class LabGyroscope : ApparatusParameters {
     [SerializeField] private float gravity = 9.81f;                         // m/s²
 
 
+    public float WheelMass => wheelMass;
+    public float CounterweightMass => counterweightMass;
+    public float Gravity => gravity;
     public float WheelRadius => wheelRadius;
     public float WheelDistance => wheelDistance;
     public float NotchDistance => notchDistance;

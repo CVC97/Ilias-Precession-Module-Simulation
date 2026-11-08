@@ -23,6 +23,7 @@ public class ApparatusRig : MonoBehaviour {
     public ApparatusParameters Parameters => parameters;
     public Transform Rotor => rotor;
     public TrailRenderer Trail => trail;
+    public GameObject StandObject => stand;
     public float MinTheta0Deg => minTheta0Deg;
     public float MaxTheta0Deg => maxTheta0Deg;
     public Vector3 VectorScales => vectorScales;

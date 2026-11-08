@@ -57,6 +57,12 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     public Apparatus SelectedApparatus => apparatus;                            // "Apparatus" is taken by the enum
     public ApparatusRig ActiveRig => Rig;
+    public ApparatusRig LabRig => labRig;                                       // AssemblyMode takes its parts apart
+    public float MaxVisibleSpinRps => maxVisibleSpinRps;
+
+    // Assembly mode (AssemblyMode) poses the lab apparatus itself. Frozen, the model still takes restarts and changes
+    // (Run counts on, so the page sees the new run after "Loslassen"), but it neither moves nor poses the apparatus.
+    public bool Frozen { get; set; }
     public float Rpm => rpm;
     public float AddOnMassGrams => addOnMassGrams;
     public float Theta0Deg => theta0Deg;
@@ -168,7 +174,7 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         Run++;
         Segment++;
 
-        ApplyPose();
+        if (!Frozen) ApplyPose();
         if (rig.Trail != null) rig.Trail.Clear();
     }
 
@@ -229,6 +235,10 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         } else if (changePending) {
             ContinueSimulation();
         }
+        if (Frozen) {
+            pushPending = false;                                                // a Stoß on a held apparatus is lost, not saved up
+            return;
+        }
         if (pushPending) {
             gyroscope.Push(pushThetaDot, pushPhiDot);
             pushPending = false;
@@ -250,8 +260,10 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
                 ContinueSimulation();
             }
         }
-        UpdateDisplaySpin();
-        ApplyPose();
+        if (!Frozen) {
+            UpdateDisplaySpin();
+            ApplyPose();
+        }
 
         omegaR = (float)OmegaR;
         omegaP = (float)OmegaP;

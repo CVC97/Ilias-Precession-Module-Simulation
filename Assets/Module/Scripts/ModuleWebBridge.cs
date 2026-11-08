@@ -7,6 +7,8 @@ using UnityEngine;
 // never depends on what ran before. The field names are the JSON keys.
 [Serializable]
 public class ModulePreset {
+    public string mode = "simulation";                                          // "simulation" | "assembly" (build it yourself,
+                                                                                // AssemblyMode; the other fields except time are ignored)
     public string apparatus = "lab";                                            // "lab" | "top"
     public float rpm = 400f;                                                    // clamped per apparatus (lab 800, top 3000)
     public float addOnMassGrams = 30f;                                          // lab only
@@ -50,6 +52,27 @@ public class ModuleStateMessage {
 }
 
 
+// Assembly mode, on every event. Part ids: pivot (Lagerbock), axle (Achse), wheel (Rad), counterweight
+// (Ausgleichsgewicht), lightgate (Lichtschranke), weight (Zusatzgewicht), pendulum (Pendelgewicht, fits nowhere).
+// Slots 1–6: rod top, bearing, wheel end, other end, beside the wheel, notch. The page writes its own hint texts from
+// event + part + slot; the sim's German hints are only shown in the editor test panel.
+[Serializable]
+public class ModuleAssemblyMessage {
+    public string source = "precession-sim";
+    public string type = "assembly";
+    public string phase;                                                        // build | balance | weight | spin | released
+    public string[] placed;                                                     // ids of the parts on their slots
+    public int[] slots;                                                         // markers shown now
+    public string selected;                                                     // id or ""
+    public string @event;                                                       // begin | select | deselect | grab | place | wrong |
+                                                                                // back | unavailable | phase | balanced | spin | spun |
+                                                                                // release | end
+    public string part;                                                         // id or ""
+    public int slot;                                                            // 0 = none
+    public int seq;                                                             // +1 per message
+}
+
+
 // The module scene's end of the page ↔ simulation contract. The page's commands arrive through the template script
 // (origin check, allowlist) as unityInstance.SendMessage("WebBridge", method, value); the value is a number or a
 // string, so switches come as 0/1 and structured data as a JSON string. Back to the page goes JSON through
@@ -65,9 +88,11 @@ public class ModuleWebBridge : MonoBehaviour {
     [SerializeField, TextArea(3, 8)] private string testPreset =
         "{\"apparatus\":\"lab\",\"rpm\":200,\"addOnMassGrams\":0,\"pushThetaDot\":2,\"show\":{\"D\":false}}";
     [SerializeField, TextArea(3, 8)] private string lastMessage;                // what was sent last (written in Play mode)
+    [SerializeField] private bool startAssemblyInEditor = true;                 // Play mode starts in the assembly game (no page to ask for it)
 
     private readonly ModuleStateMessage state = new ModuleStateMessage();
     private float sinceState;
+    private AssemblyMode assembly;
 
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
@@ -80,6 +105,15 @@ public class ModuleWebBridge : MonoBehaviour {
     public void ApplyPreset(string json) {
         var preset = new ModulePreset();
         if (!TryOverwrite(json, preset)) return;
+
+        // assembly is null only outside Play mode (the context menu below)
+        if (preset.mode == "assembly") {
+            if (assembly != null) assembly.Begin();                             // sets apparatus, helpers and view itself
+            simTime.SetTimeScale(preset.timeScale);
+            simTime.SetPaused(preset.paused);
+            return;
+        }
+        if (assembly != null) assembly.End();                                   // a normal page: every part back where it belongs
 
         if (TryParseApparatus(preset.apparatus, out var apparatus)) controller.SetApparatus(apparatus);
         if (TryParseStartMode(preset.startMode, out var startMode)) controller.SetStartMode(startMode);
@@ -120,13 +154,32 @@ public class ModuleWebBridge : MonoBehaviour {
     public void Restart() => controller.Restart();
     public void Push() => controller.Push();
 
+    // assembly mode, prepared for a later page (the template's COMMANDS allowlist doesn't pass these yet)
+    public void AssemblySelect(string part) => assembly.Select(part);          // part id, see ModuleAssemblyMessage
+    public void AssemblyPlace(float slot) => assembly.Place(Mathf.RoundToInt(slot));   // the selected part onto slot 1–6
+    public void AssemblyBalance(float metres) => assembly.SetBalance(metres);  // counterweight from the pivot, 0.08–0.24 m
+    public void AssemblyAction(string action) => assembly.DoAction(action);    // "spin" | "release"
+    public void AssemblyReset() {                                               // Neu beginnen
+        if (assembly.Active) assembly.Begin();
+    }
+    public void SetCameraView(string view) => assembly.SetView(view);          // "oblique" | "side" | "top"
+
 
     [ContextMenu("Apply test preset")]
     private void ApplyTestPreset() => ApplyPreset(testPreset);
 
 
+    void Awake() {
+        assembly = gameObject.AddComponent<AssemblyMode>();
+        assembly.Setup(controller, helpers, Post);
+    }
+
+
     void Start() {
         Post(JsonUtility.ToJson(new ModuleReadyMessage()));
+#if UNITY_EDITOR
+        if (startAssemblyInEditor) assembly.Begin();
+#endif
     }
 
 
