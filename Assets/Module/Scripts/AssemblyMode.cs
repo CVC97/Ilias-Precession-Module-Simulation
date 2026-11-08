@@ -127,7 +127,7 @@ public class AssemblyMode : MonoBehaviour {
     private readonly ModuleAssemblyMessage message = new ModuleAssemblyMessage();
 
 
-    // ---- read by the editor test panel ----
+    // ---- read by the on-screen panel ----
 
     public bool Active => active;
     public Phase CurrentPhase => phase;
@@ -167,7 +167,7 @@ public class AssemblyMode : MonoBehaviour {
     }
 
 
-    // ---- called by ModuleWebBridge (and the editor test panel) ----
+    // ---- called by ModuleWebBridge (and the on-screen panel) ----
 
     public void Setup(ModuleGyroscopeController controller, ModuleHelpers helpers, Action<string> post) {
         this.controller = controller;
@@ -233,9 +233,7 @@ public class AssemblyMode : MonoBehaviour {
         nameLabel = Text(root, "PartName", "", 0.22f, labelStyle);
         root.gameObject.SetActive(false);
 
-#if UNITY_EDITOR
-        gameObject.AddComponent<AssemblyTestPanel>();
-#endif
+        gameObject.AddComponent<AssemblyPanel>();
         ready = true;
     }
 
@@ -417,7 +415,7 @@ public class AssemblyMode : MonoBehaviour {
         Pointer pointer = Pointer.current;
         if (pointer == null) return false;
         Vector2 position = pointer.position.ReadValue();
-        if (AssemblyTestPanel.Covers(position)) return true;
+        if (AssemblyPanel.Covers(position)) return true;
         if (!active || cam == null) return false;
         Ray ray = cam.ScreenPointToRay(position);
         return PartAt(ray) != null || (selected != null && SlotAt(ray, ClickRadius) != 0);
@@ -431,7 +429,7 @@ public class AssemblyMode : MonoBehaviour {
         if (pointer == null || cam == null) return;
         Vector2 position = pointer.position.ReadValue();
         Ray ray = cam.ScreenPointToRay(position);
-        bool overPanel = AssemblyTestPanel.Covers(position);
+        bool overPanel = AssemblyPanel.Covers(position);
 
         if (pointer.press.wasPressedThisFrame && !overPanel) {
             pressActive = true;

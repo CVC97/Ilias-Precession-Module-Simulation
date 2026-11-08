@@ -1,18 +1,16 @@
 using UnityEngine;
 
 
-// Editor-only test panel for the assembly mode (AssemblyMode): what a page will offer later, as buttons, so the game
-// can be tried in Play mode without the module. The buttons call the bridge's assembly commands, the same path the
-// page will use. A click on the panel never reaches the scene: AssemblyMode and the orbit camera ask Covers.
-// Added by AssemblyMode in the editor only; in builds the page brings its own UI.
-public class AssemblyTestPanel : MonoBehaviour {
-    private static Rect area;                                                   // screen pixels, top left; empty in builds
+// On-screen panel for the assembly mode (AssemblyMode), in the editor and in the standalone web build, so the game can
+// be played without the learning module. The buttons call the bridge's assembly commands, the same path a page will
+// use. A click on the panel never reaches the scene: AssemblyMode and the orbit camera ask Covers.
+public class AssemblyPanel : MonoBehaviour {
+    private static Rect area;                                                   // screen pixels, top left
 
     // position as the Input System gives it (origin bottom left)
     public static bool Covers(Vector2 screenPosition) =>
         area.Contains(new Vector2(screenPosition.x, Screen.height - screenPosition.y));
 
-#if UNITY_EDITOR
     private const float Width = 320f;
     private const int WindowId = 0x4A55;                                        // any number unique among the scene's IMGUI windows
     private AssemblyMode assembly;
@@ -33,9 +31,9 @@ public class AssemblyTestPanel : MonoBehaviour {
 
 
     void OnGUI() {
-        float scale = Mathf.Max(1f, Screen.height / 1000f);                     // readable in a large Game view
+        float scale = Mathf.Max(1f, Screen.height / 1000f);                     // readable on large and HiDPI screens
         GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
-        window = GUILayout.Window(WindowId, window, Draw, "Aufbau-Spiel (Editor-Test)", GUILayout.Width(Width));
+        window = GUILayout.Window(WindowId, window, Draw, "Kreisel aufbauen", GUILayout.Width(Width));
         area = new Rect(window.x * scale, window.y * scale, window.width * scale, window.height * scale);
     }
 
@@ -105,5 +103,4 @@ public class AssemblyTestPanel : MonoBehaviour {
 
         GUI.DragWindow();                                                       // the panel can be moved by its title bar
     }
-#endif
 }

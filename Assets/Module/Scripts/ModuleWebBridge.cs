@@ -55,7 +55,7 @@ public class ModuleStateMessage {
 // Assembly mode, on every event. Part ids: pivot (Lagerbock), axle (Achse), wheel (Rad), counterweight
 // (Ausgleichsgewicht), lightgate (Lichtschranke), weight (Zusatzgewicht), pendulum (Pendelgewicht, fits nowhere).
 // Slots 1–6: rod top, bearing, wheel end, other end, beside the wheel, notch. The page writes its own hint texts from
-// event + part + slot; the sim's German hints are only shown in the editor test panel.
+// event + part + slot; the sim's German hints are only shown in its own panel (AssemblyPanel).
 [Serializable]
 public class ModuleAssemblyMessage {
     public string source = "precession-sim";
@@ -88,7 +88,11 @@ public class ModuleWebBridge : MonoBehaviour {
     [SerializeField, TextArea(3, 8)] private string testPreset =
         "{\"apparatus\":\"lab\",\"rpm\":200,\"addOnMassGrams\":0,\"pushThetaDot\":2,\"show\":{\"D\":false}}";
     [SerializeField, TextArea(3, 8)] private string lastMessage;                // what was sent last (written in Play mode)
-    [SerializeField] private bool startAssemblyInEditor = true;                 // Play mode starts in the assembly game (no page to ask for it)
+
+    [Header("Assembly game")]
+    // starts in the assembly game, in Play mode and in the standalone web build (no page to ask for it); an embedding
+    // module page ends it with its first preset
+    [SerializeField] private bool startAssembly = true;
 
     private readonly ModuleStateMessage state = new ModuleStateMessage();
     private float sinceState;
@@ -177,9 +181,7 @@ public class ModuleWebBridge : MonoBehaviour {
 
     void Start() {
         Post(JsonUtility.ToJson(new ModuleReadyMessage()));
-#if UNITY_EDITOR
-        if (startAssemblyInEditor) assembly.Begin();
-#endif
+        if (startAssembly) assembly.Begin();
     }
 
 
