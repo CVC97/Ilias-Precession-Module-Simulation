@@ -7,4 +7,9 @@ mergeInto(LibraryManager.library, {
     // targetOrigin = own origin: the message only reaches a parent page on the same server
     window.parent.postMessage(JSON.parse(json), window.location.origin);
   },
+
+  // 1 inside a page's iframe (the module), 0 standalone (Melissa's GitHub Pages build, a direct visit to sim/index.html)
+  ModuleIsEmbedded: function () {
+    return window.parent !== window ? 1 : 0;
+  },
 });

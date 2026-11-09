@@ -1,0 +1,9 @@
+<!-- Keeps engine classes that "Strip Engine Code" would remove because no scene uses them.
+     AssemblyMode builds markers, LED and pendulum bob with GameObject.CreatePrimitive(Sphere), which adds a SphereCollider
+     (removed again at once); without the class every sphere logs "Can't add component because class 'SphereCollider'
+     doesn't exist!" in the web build. -->
+<linker>
+  <assembly fullname="UnityEngine.PhysicsModule">
+    <type fullname="UnityEngine.SphereCollider" preserve="all"/>
+  </assembly>
+</linker>

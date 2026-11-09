@@ -26,6 +26,8 @@ Only needed when scripts, the module scene or its assets changed (not for change
 
 ```bash
 # Unity: Build Profiles → Web - Module - Release → raise Version → Build into Builds/ModuleWeb
+#   or, with the editor closed (version still raised in the profile first):
+#   ~/Unity/Hub/Editor/6000.6.4f1/Editor/Unity -batchmode -nographics -projectPath . -executeMethod ModuleBuild.BuildFromCommandLine -logFile build.log
 python3 -m http.server 8000                              # optional: localhost:8000/Tools/bridge-test.html
 Tools/package-module-build.sh                            # → Builds/ModuleWeb.zip
 cd ../ilias-precession-module/frontend && npm run fetch-sim -- ../../ilias-precession-simulation/Builds/ModuleWeb.zip && npx ng serve   # try it

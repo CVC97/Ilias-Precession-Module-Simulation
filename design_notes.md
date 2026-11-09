@@ -4,20 +4,22 @@ What was built and why: the decisions behind the Unity simulation, for anyone (o
 
 Built by Carlo (physics education group, Göttingen) with Claude, 2026-10-02 to 2026-10-30. The original simulation was Carlo's Unity/C# learning project (Carlo wrote the code, Claude tutored); the module build was written by Claude and checked step by step by Carlo in the editor. This file replaces the working log `learning_migration.md` (gitignored, local only).
 
-Related: the learning module [`../ilias-precession-module`](https://github.com/CVC97/Ilias-Precession-Module) has its own `design_notes.md` for the page side (learning path, the six embeds, panel rules, the sim contract as the page uses it). Rough lab data are in `experimental.md` (gitignored).
+The assembly game (section 5, *Assembly game*) was built by Melissa Atik (fork [MelissaAtik/precession-simulation](https://github.com/MelissaAtik/precession-simulation), remote `setup` here) and merged on 2026-11-09.
+
+Related: the learning module [`../ilias-precession-module`](https://github.com/CVC97/Ilias-Precession-Module) has its own `design_notes.md` for the page side (learning path, the seven embeds, panel rules, the sim contract as the page uses it). Rough lab data are in `experimental.md` (gitignored).
 
 
-## 1 Status (2026-10-30)
+## 1 Status (2026-11-09)
 
 | | Original | Module build |
 |---|---|---|
-| Purpose | standalone demo: a heavy top on a tip, noir look, own controls | embedded in the learning module on six pages, controlled by the page |
+| Purpose | standalone demo: a heavy top on a tip, noir look, own controls | embedded in the learning module on seven pages, controlled by the page; one of them is the assembly game |
 | Scene | `Assets/Scenes/SampleScene.unity` | `Assets/Module/ModuleScene.unity` |
 | Build profile | *Web - Desktop - Release* → `docs/` (tracked) | *Web - Module - Release* → `Builds/ModuleWeb/` (gitignored) |
 | Web template | `Assets/WebGLTemplates/Precession` | `Assets/WebGLTemplates/PrecessionModule` |
 | Bridge | `WebBridge` (JS → C# only) | `ModuleWebBridge` + `ModuleBridge.jslib` (both ways) |
 | Release | tag `sim-v*` → GitHub Pages (workflow) | tag `module-sim-v*` + GitHub release with `ModuleWeb.zip` → the module's `sim.version` |
-| Live | `sim-v1.0.3` | `module-sim-v1.1.0` |
+| Live | `sim-v1.0.3` | `module-sim-v1.3.0`; `v1.4.0` adds the assembly game |
 
 Everything is on `master` (the former `module-sim` branch is merged). Open items: section 9.
 
@@ -93,6 +95,17 @@ Two apparatus in one build, chosen by the page's preset (learning path lab → s
 - **Setters only mark changes; one apply per `FixedUpdate`.** Apparatus and start mode **restart** (`Run` + 1). Drehzahl, Zusatzgewicht and Neigung **continue** the running gyroscope (`Segment` + 1, from v1.1.0, Carlo: a slider must not put the gyroscope back to its start pose): the model is rebuilt and takes over φ, ψ, θ̇; in guided mode φ̇ shifts by the change of the steady rate, so a calm precession stays calm and nutation keeps its deviation.
 - **Start modes:** guided = φ̇₀ at the steady rate (no nodding); released = axle at rest (dip ∝ m_z/ω_R², cusps).
 
+### Assembly game (Melissa Atik, from module-sim-v1.4.0)
+
+The students build the lab gyroscope before it runs: parts on a tray in front of the stand (Rad, Zusatzgewicht, Lagerbock, Lichtschranke, Achse, the distractor Pendelgewicht, Ausgleichsgewicht, in a mixed order that doesn't give the build order away), dragged or clicked onto numbered glowing markers that appear in the order the apparatus allows. Then balancing with the counterweight (it snaps in after 0.5 s within 4 mm of m_w d_w / m_c ≈ 17.3 cm), the add-on weight into the notch (the unspun axle tips), spinning up by hand while the axle is held level (the light barrier's LED flashes once per turn), and letting go: from there `ModuleGyroscopeController` runs the real precession (released start, 400 rpm, 30 g).
+
+- **A mode of the module scene, not a scene of its own:** `AssemblyMode` is created at runtime by `ModuleWebBridge`, takes the lab rig's parts apart and puts them back (`End`). One build, one release, one download for the students.
+- **Started by the page** with `ApplyPreset {"mode":"assembly"}`; any other preset ends it. Commands `AssemblyBalance`, `AssemblyAction`, `AssemblySelect`, `AssemblyPlace`, `AssemblyReset`, `SetCameraView`; on every event a message `type:"assembly"` (phase, placed parts, shown markers, event, part, marker). The page writes its own hint texts from event + part + marker; the sim's German texts (`AssemblyMode.Texts`) appear only in its own panel.
+- **Standalone vs. embedded** (`ModuleIsEmbedded` in the `.jslib`: `window.parent !== window`): opened directly (editor, Melissa's GitHub Pages build) the game starts by itself with the IMGUI panel `AssemblyPanel`; inside a module page neither, so the other six embeds show no Unity UI. Decided 2026-11-09 when merging: Melissa's first version started the game and drew the panel everywhere.
+- **While building, the controller is `Frozen`**: it still takes restarts and changes (Run counts on), but neither moves nor poses the apparatus; `AssemblyMode` poses it (tilt about the horizontal pivot axis without spin, damped, with stops at ±25°).
+- **Camera:** `OrbitCamera.SetView`/`ResetView` (prepared views oblique, side, top), and `OrbitCamera.BlockOrbit` so a press on a part drags the part, not the view. Input through `Pointer.current`, so touch works for the parts (the camera still has no touch rotation).
+- Hands and animations run in real time with each frame capped at 0.05 s, so at very low frame rates (software WebGL in headless Chrome: a few fps) they take several times longer; in a normal browser they don't.
+
 ### Look ("studio", Carlo)
 
 A flat light look was tried first and rejected as lacking the polished feel. Now: soft warm spot + cool rim light, metal wheel and axle with a small studio reflection cubemap (128 px, `Assets/Module/Textures`), matt dark gray base (colour means physical quantity, so apparatus takes no vector's colour), light floor fading into fog of the stage colour, gentle post (neutral tonemapping, contrast +20, bloom 0.2, blue vignette). Smooth 96-sided cylinders replace the faceted built-in ones. URP shadow distance 1 → 3 m project-wide (approved; harmless for the original). One light theme; `?theme=dark` only darkens the loading screen.
@@ -140,6 +153,8 @@ module page ◄── postMessage {source:'precession-sim', type:'ready' | 'stat
 - **`docs/` and `.gitignore`:** ignoring doesn't apply to tracked files (`git rm --cached`); `docs/` is tracked on purpose (Pages), so it stays un-ignored.
 - **Compile and test without the editor:** copy the Unity-generated `*.csproj` to a scratch folder, make paths absolute, `dotnet build`; the physics and its NUnit tests run in a scratch project linking `Assets/Scripts/Physics/*.cs` and `Assets/Module/Tests/EditMode/*.cs`.
 - **Headless Chrome screenshots of the canvas** need `--use-angle=swiftshader --enable-unsafe-swiftshader` (WebGL 2).
+- **"Can't add component because class 'X' doesn't exist!" only in the web build:** *Strip Engine Code* removed an engine class no scene uses. `GameObject.CreatePrimitive(Sphere)` adds a `SphereCollider` (the assembly game removes it at once); `Assets/Module/link.xml` keeps the class. Add a line there for the next such class.
+- **Build without opening the editor** (Melissa): `Unity -batchmode -nographics -projectPath . -executeMethod ModuleBuild.BuildFromCommandLine -logFile build.log` (menu *Module → Build module* does the same). Only while the editor is closed (project lock); about 3 min.
 
 
 ## 7 Reusing this for another simulation
@@ -161,9 +176,11 @@ Assets/Scripts/Testing/        ModelTest (console checks of the original model)
 Assets/Editor/                 NoirSceneSetup (menu Noir → …)
 Assets/Module/Scripts/         ModuleGyroscopeController, ApparatusParameters/LabGyroscope/SimpleTop, ApparatusRig, ModuleHelpers,
                                HelperCone, PrecessionDisplay, NutationCones, HangingWeight, PivotHead,
-                               ModuleWebBridge (+ DTOs), PrecessionArc/PrecessionVector (off)
-Assets/Module/Editor/          ModuleSceneSetup (menu Module → …)
+                               ModuleWebBridge (+ DTOs), PrecessionArc/PrecessionVector (off),
+                               AssemblyMode, AssemblyPanel (assembly game, Melissa Atik)
+Assets/Module/Editor/          ModuleSceneSetup (menu Module → …), ModuleBuild (menu and command line)
 Assets/Module/Plugins/         ModuleBridge.jslib
+Assets/Module/link.xml         engine classes Strip Engine Code must keep (SphereCollider)
 Assets/Module/Tests/EditMode/  GyroscopeModelTests (NUnit)
 Assets/WebGLTemplates/         Precession (original), PrecessionModule (module)
 Design/                        thumbnail.svg (template thumbnail source)
@@ -173,6 +190,9 @@ Tools/                         package-module-build.sh, bridge-test.html
 
 
 ## 9 Open items
+
+- **Assembly game on real devices:** dragging parts with a finger on phones and tablets is untested (only `Pointer.current` in the code, and headless Chrome driven by commands). The module page offers no buttons for the prepared camera views (`SetCameraView`); add them if students lose the tray from view.
+- **Assembly hint texts exist twice:** `AssemblyMode.Texts` (standalone panel) and the module's `shared/sim-embed/assembly-hints.ts` (embedded). A text change on one side should be checked on the other.
 
 - **Push sign quirk:** positive `pushThetaDot` raises the wheel on `lab` but lowers the disk on `top` (it acts on the model θ). Unify with `ThetaOfL` if a page ever pushes the top in θ; only p6 uses it (lab, positive).
 - `PrecessionArc` and `PrecessionVector` are off and unused: delete them or keep them for comparison.

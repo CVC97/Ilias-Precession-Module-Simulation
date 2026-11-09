@@ -13,7 +13,8 @@ using UnityEngine.InputSystem;
 // Until the release the controller is frozen and this component poses the apparatus itself: without spin the axle just
 // tips about the horizontal pivot axis, driven by the parts already placed, until it hits a stop.
 // Created at runtime by ModuleWebBridge (Setup); the page starts it with a preset {"mode":"assembly"}, any other
-// preset ends it (End puts every part back where the scene had it). In the editor it starts by itself.
+// preset ends it (End puts every part back where the scene had it). Standalone (editor, a build opened directly) it
+// starts by itself with its on-screen panel; embedded in a page, neither (ModuleWebBridge decides).
 [DefaultExecutionOrder(1000)]                                                   // after HangingWeight, PivotHead and the orbit camera
 public class AssemblyMode : MonoBehaviour {
     public enum Phase { Build, Balance, Weight, Spin, Released }
@@ -169,7 +170,8 @@ public class AssemblyMode : MonoBehaviour {
 
     // ---- called by ModuleWebBridge (and the on-screen panel) ----
 
-    public void Setup(ModuleGyroscopeController controller, ModuleHelpers helpers, Action<string> post) {
+    // panel: the on-screen panel (AssemblyPanel), only standalone; embedded, the page provides the controls
+    public void Setup(ModuleGyroscopeController controller, ModuleHelpers helpers, Action<string> post, bool panel) {
         this.controller = controller;
         this.helpers = helpers;
         this.post = post;
@@ -233,7 +235,7 @@ public class AssemblyMode : MonoBehaviour {
         nameLabel = Text(root, "PartName", "", 0.22f, labelStyle);
         root.gameObject.SetActive(false);
 
-        gameObject.AddComponent<AssemblyPanel>();
+        if (panel) gameObject.AddComponent<AssemblyPanel>();
         ready = true;
     }
 

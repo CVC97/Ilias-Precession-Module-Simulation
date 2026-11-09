@@ -90,8 +90,9 @@ public class ModuleWebBridge : MonoBehaviour {
     [SerializeField, TextArea(3, 8)] private string lastMessage;                // what was sent last (written in Play mode)
 
     [Header("Assembly game")]
-    // starts in the assembly game, in Play mode and in the standalone web build (no page to ask for it); an embedding
-    // module page ends it with its first preset
+    // Standalone (Play mode, a web build opened directly): start in the assembly game with its on-screen panel, since no
+    // page is there to ask for it. Embedded in a module page: never; the page starts it with {"mode":"assembly"} and
+    // provides the controls itself, and the other pages must not show a Unity panel.
     [SerializeField] private bool startAssembly = true;
 
     private readonly ModuleStateMessage state = new ModuleStateMessage();
@@ -101,6 +102,12 @@ public class ModuleWebBridge : MonoBehaviour {
 #if UNITY_WEBGL && !UNITY_EDITOR
     [DllImport("__Internal")]
     private static extern void ModulePostToParent(string json);                 // Assets/Module/Plugins/ModuleBridge.jslib
+    [DllImport("__Internal")]
+    private static extern int ModuleIsEmbedded();
+
+    private static bool Embedded => ModuleIsEmbedded() != 0;
+#else
+    private static bool Embedded => false;                                      // editor and other platforms: standalone
 #endif
 
 
@@ -158,7 +165,7 @@ public class ModuleWebBridge : MonoBehaviour {
     public void Restart() => controller.Restart();
     public void Push() => controller.Push();
 
-    // assembly mode, prepared for a later page (the template's COMMANDS allowlist doesn't pass these yet)
+    // assembly mode (the module's p1-assembly uses AssemblyBalance and AssemblyAction; the template passes all six)
     public void AssemblySelect(string part) => assembly.Select(part);          // part id, see ModuleAssemblyMessage
     public void AssemblyPlace(float slot) => assembly.Place(Mathf.RoundToInt(slot));   // the selected part onto slot 1–6
     public void AssemblyBalance(float metres) => assembly.SetBalance(metres);  // counterweight from the pivot, 0.08–0.24 m
@@ -175,13 +182,13 @@ public class ModuleWebBridge : MonoBehaviour {
 
     void Awake() {
         assembly = gameObject.AddComponent<AssemblyMode>();
-        assembly.Setup(controller, helpers, Post);
+        assembly.Setup(controller, helpers, Post, !Embedded);                    // the on-screen panel only standalone
     }
 
 
     void Start() {
         Post(JsonUtility.ToJson(new ModuleReadyMessage()));
-        if (startAssembly) assembly.Begin();
+        if (startAssembly && !Embedded) assembly.Begin();
     }
 
 

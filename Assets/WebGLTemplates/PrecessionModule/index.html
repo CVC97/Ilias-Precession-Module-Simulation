@@ -87,7 +87,8 @@
     // here reach C# (ModuleWebBridge on the WebBridge object), with the value converted to what the C# method takes:
     // SendMessage carries one number or one string.
     // The answers (ready, state ~10 Hz) come from C# through ModuleBridge.jslib.
-    // ?embedded=1 changes nothing here: the module build has no Unity UI, the page provides all controls.
+    // Embedded in a page, the module build shows no Unity UI: the page provides all controls. Opened directly (not in an
+    // iframe) it starts in the assembly game with its own on-screen panel (ModuleWebBridge, ModuleIsEmbedded).
     const COMMANDS = {
       ApplyPreset: "json",        // complete preset, missing fields take the defaults; one restart
       SetHelpers: "json",         // partial: only the named show flags change
@@ -103,6 +104,13 @@
       SetPushPhiDot: "number",    // Stoß strength sideways, rad/s; no restart (from v1.3.0)
       Restart: "none",
       Push: "none",
+      // assembly game (from module-sim-v1.4.0), started with ApplyPreset {"mode":"assembly"}; any other preset ends it
+      AssemblyBalance: "number",  // counterweight from the pivot, m (0.08–0.24); only in the balance phase
+      AssemblyAction: "string",   // "spin" | "release"
+      AssemblySelect: "string",   // part id
+      AssemblyPlace: "number",    // the selected part onto marker 1–6
+      AssemblyReset: "none",      // Neu beginnen
+      SetCameraView: "string",    // "oblique" | "side" | "top"
     };
     const queued = [];            // commands that arrive before Unity runs
 
