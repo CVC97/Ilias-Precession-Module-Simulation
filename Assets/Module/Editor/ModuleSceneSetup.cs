@@ -981,7 +981,7 @@ public static class ModuleSceneSetup {
 
     // like Unity's cylinder primitive (radius 0.5, y from −1 to 1, so all scales stay valid), but with 96 sides;
     // smooth normals on the side, flat caps with their own vertices (sharp rim edge). Saved once as a mesh asset.
-    private static Mesh SmoothCylinder() {
+    internal static Mesh SmoothCylinder() {
         var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(CylinderMeshPath);
         if (mesh != null) {
             return mesh;

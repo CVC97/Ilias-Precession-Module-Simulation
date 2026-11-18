@@ -2,8 +2,9 @@ using UnityEngine;
 
 
 // What the controller needs from an apparatus: both are symmetric tops with one fixed point, so GyroscopeModel
-// describes both; only these numbers differ. Implemented by LabGyroscope and SimpleTop.
-// Convention: the model's figure axis points from the pivot to the side where the torque pulls down.
+// describes both; only these numbers differ. Implemented by LabGyroscope, SimpleTop and LectureGyroscope.
+// Convention: the model's figure axis points from the pivot to the side where the torque pulls down (k > 0). The
+// lecture gyroscope keeps its axis on the disk side instead and has k < 0 when it hangs (centre of mass below the tip).
 public abstract class ApparatusParameters : ScriptableObject {
     public abstract double I3 { get; }                              // kg·m², about the figure axis
     public abstract double I1(double addOnMass);                    // kg·m², about a horizontal axis through the pivot

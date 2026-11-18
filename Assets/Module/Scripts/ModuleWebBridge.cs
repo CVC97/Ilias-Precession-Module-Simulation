@@ -9,7 +9,7 @@ using UnityEngine;
 public class ModulePreset {
     public string mode = "simulation";                                          // "simulation" | "assembly" (build it yourself,
                                                                                 // AssemblyMode; the other fields except time are ignored)
-    public string apparatus = "lab";                                            // "lab" | "top"
+    public string apparatus = "lab";                                            // "lab" | "top" | "lecture" (lecture build only)
     public float rpm = 400f;                                                    // clamped per apparatus (lab 800, top 3000)
     public float addOnMassGrams = 30f;                                          // lab only
     public float theta0Deg = 90f;                                               // θ₀ of L⃗, clamped per apparatus
@@ -49,6 +49,7 @@ public class ModuleStateMessage {
     public float addOnMassGrams;
     public bool paused;
     public bool spinLimited;                                                    // drawn spin slower than the real one
+    public bool fallen;                                                         // tipped onto its stand (lecture), until restart
 }
 
 
@@ -94,6 +95,8 @@ public class ModuleWebBridge : MonoBehaviour {
     // page is there to ask for it. Embedded in a module page: never; the page starts it with {"mode":"assembly"} and
     // provides the controls itself, and the other pages must not show a Unity panel.
     [SerializeField] private bool startAssembly = true;
+    // off in the lecture scene: no AssemblyMode at all, the Assembly commands do nothing
+    [SerializeField] private bool assemblyAvailable = true;
 
     private readonly ModuleStateMessage state = new ModuleStateMessage();
     private float sinceState;
@@ -166,14 +169,14 @@ public class ModuleWebBridge : MonoBehaviour {
     public void Push() => controller.Push();
 
     // assembly mode (the module's p1-assembly uses AssemblyBalance and AssemblyAction; the template passes all six)
-    public void AssemblySelect(string part) => assembly.Select(part);          // part id, see ModuleAssemblyMessage
-    public void AssemblyPlace(float slot) => assembly.Place(Mathf.RoundToInt(slot));   // the selected part onto slot 1–6
-    public void AssemblyBalance(float metres) => assembly.SetBalance(metres);  // counterweight from the pivot, 0.08–0.24 m
-    public void AssemblyAction(string action) => assembly.DoAction(action);    // "spin" | "release"
+    public void AssemblySelect(string part) => assembly?.Select(part);         // part id, see ModuleAssemblyMessage
+    public void AssemblyPlace(float slot) => assembly?.Place(Mathf.RoundToInt(slot));  // the selected part onto slot 1–6
+    public void AssemblyBalance(float metres) => assembly?.SetBalance(metres); // counterweight from the pivot, 0.08–0.24 m
+    public void AssemblyAction(string action) => assembly?.DoAction(action);   // "spin" | "release"
     public void AssemblyReset() {                                               // Neu beginnen
-        if (assembly.Active) assembly.Begin();
+        if (assembly != null && assembly.Active) assembly.Begin();
     }
-    public void SetCameraView(string view) => assembly.SetView(view);          // "oblique" | "side" | "top"
+    public void SetCameraView(string view) => assembly?.SetView(view);         // "oblique" | "side" | "top"
 
 
     [ContextMenu("Apply test preset")]
@@ -181,6 +184,7 @@ public class ModuleWebBridge : MonoBehaviour {
 
 
     void Awake() {
+        if (!assemblyAvailable) return;
         assembly = gameObject.AddComponent<AssemblyMode>();
         assembly.Setup(controller, helpers, Post, !Embedded);                    // the on-screen panel only standalone
     }
@@ -188,7 +192,7 @@ public class ModuleWebBridge : MonoBehaviour {
 
     void Start() {
         Post(JsonUtility.ToJson(new ModuleReadyMessage()));
-        if (startAssembly && !Embedded) assembly.Begin();
+        if (assembly != null && startAssembly && !Embedded) assembly.Begin();
     }
 
 
@@ -201,7 +205,7 @@ public class ModuleWebBridge : MonoBehaviour {
         state.run = controller.Run;
         state.segment = controller.Segment;
         state.time = (float)controller.SimTime;
-        state.apparatus = controller.SelectedApparatus == ModuleGyroscopeController.Apparatus.Lab ? "lab" : "top";
+        state.apparatus = ApparatusName(controller.SelectedApparatus);
         state.thetaDeg = (float)(controller.Theta * Mathf.Rad2Deg);
         state.phiDeg = (float)(controller.Model.Phi * Mathf.Rad2Deg);
         state.phiDot = (float)controller.Model.PhiDot;
@@ -210,6 +214,7 @@ public class ModuleWebBridge : MonoBehaviour {
         state.addOnMassGrams = controller.AddOnMassGrams;
         state.paused = simTime.Paused;
         state.spinLimited = controller.SpinDisplayLimited;
+        state.fallen = controller.Fallen;
         Post(JsonUtility.ToJson(state));
     }
 
@@ -237,10 +242,19 @@ public class ModuleWebBridge : MonoBehaviour {
         switch (value) {
             case "lab": apparatus = ModuleGyroscopeController.Apparatus.Lab; return true;
             case "top": apparatus = ModuleGyroscopeController.Apparatus.SimpleTop; return true;
+            case "lecture": apparatus = ModuleGyroscopeController.Apparatus.Lecture; return true;
         }
-        Debug.LogWarning($"ModuleWebBridge: unknown apparatus \"{value}\" (lab | top)");
+        Debug.LogWarning($"ModuleWebBridge: unknown apparatus \"{value}\" (lab | top | lecture)");
         apparatus = default;
         return false;
+    }
+
+    private static string ApparatusName(ModuleGyroscopeController.Apparatus apparatus) {
+        switch (apparatus) {
+            case ModuleGyroscopeController.Apparatus.Lab: return "lab";
+            case ModuleGyroscopeController.Apparatus.SimpleTop: return "top";
+            default: return "lecture";
+        }
     }
 
     private static bool TryParseStartMode(string value, out ModuleGyroscopeController.StartMode startMode) {

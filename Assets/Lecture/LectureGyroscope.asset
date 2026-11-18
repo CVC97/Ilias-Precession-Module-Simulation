@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2fb711174b5d7f169863e9b4eccb8b6a, type: 3}
+  m_Name: LectureGyroscope
+  m_EditorClassIdentifier: Assembly-CSharp::LectureGyroscope
+  diskMass: 0.15
+  diskRadius: 0.2
+  diskHeight: 0.75
+  rodMass: 0.35
+  legsMass: 0.6
+  legsHeight: -0.06
+  legsRadius: 0.07
+  plateMass: 2.5
+  plateOuterRadius: 0.14
+  plateInnerRadius: 0.09
+  plateHeight: -0.1191
+  balanceSnap: 0.005
+  spinDecayTime: 60
+  maxRpm: 1000
+  gravity: 9.81

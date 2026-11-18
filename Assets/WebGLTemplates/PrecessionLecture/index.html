@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no">
+  <title>Vorlesungskreisel – Simulation (Lernmodul)</title>
+  <link rel="icon" type="image/svg+xml" href="TemplateData/favicon.svg">
+  <link rel="stylesheet" href="TemplateData/style.css">
+</head>
+<body>
+  <!-- The lecture gyroscope (Assets/Lecture/LectureScene): the original's noir loading screen, the module's bridge.
+       Unity renders into this canvas; its size comes from CSS (full window/iframe), the render resolution follows
+       automatically (CSS size × devicePixelRatio). Always noir: no ?theme. -->
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+  <!-- Loading screen – faded out and removed once Unity is running. The module page polls #loading-percent and
+       #loading-error (sim-embed), so keep both ids. -->
+  <div id="loading" role="status" aria-live="polite">
+    <img id="loading-emblem" src="TemplateData/emblem.svg" alt="" width="152" height="168">
+    <h1 id="loading-title">Vorlesungskreisel</h1>
+    <p id="loading-subtitle">Kreisel aus dem Hörsaal</p>
+    <div id="loading-bar" aria-hidden="true"><div id="loading-fill"></div></div>
+    <p id="loading-text">Lädt … <span id="loading-percent">0 %</span></p>
+    <p id="loading-error" hidden></p>
+  </div>
+
+  <noscript>
+    <p class="fallback">Diese Simulation benötigt JavaScript.</p>
+  </noscript>
+
+  <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+  <script>
+    const canvas  = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const fill    = document.querySelector("#loading-fill");
+    const percent = document.querySelector("#loading-percent");
+    const errorEl = document.querySelector("#loading-error");
+
+    // ---- Unity configuration (structure taken from Unity's Minimal template – keep the #if blocks) ----
+    const config = {
+      arguments: [],
+#if PROGRESSIVE_ASSET_LOADING
+      primaryDataUrls: {{{ JSON.stringify(PRIMARY_DATA_FILES) }}},
+      secondaryDataUrls: {{{ JSON.stringify(SECONDARY_DATA_FILES) }}},
+#else
+      dataUrl: "Build/{{{ DATA_FILENAME }}}",
+#endif
+      frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+      codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+      symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+      productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+      productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+      // Sharp on HiDPI screens, but capped at 2× – 3× phone displays would cost a lot of GPU time for little gain.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    };
+
+    // Right mouse button belongs to the camera – no browser context menu on the canvas.
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    function showError(message) {
+      errorEl.textContent = "Die Simulation konnte nicht gestartet werden: " + message;
+      errorEl.hidden = false;
+      loading.classList.add("failed");
+    }
+
+    createUnityInstance(canvas, config, (progress) => {
+      // progress: 0 … 1
+      fill.style.width = (100 * progress) + "%";
+      percent.textContent = Math.round(100 * progress) + " %";
+    }).then((unityInstance) => {
+      window.unityInstance = unityInstance;
+      queued.forEach(([cmd, value]) => forward(cmd, value));
+      queued.length = 0;
+      loading.classList.add("done");                  // fade out (CSS transition) …
+      loading.addEventListener("transitionend", () => loading.remove(), { once: true });
+    }).catch(showError);
+
+    // ---- page → simulation ----
+    // The same contract as the module build (PrecessionModule/index.html), without the assembly game: the page sends
+    // {source: "precession-module", type: "command", cmd, value} with postMessage; only commands listed here reach C#
+    // (ModuleWebBridge on the WebBridge object), with the value converted to what the C# method takes. The answers
+    // (ready, state ~10 Hz, with "fallen") come from C# through ModuleBridge.jslib.
+    const COMMANDS = {
+      ApplyPreset: "json",        // complete preset with apparatus "lecture"; missing fields take the defaults; one restart
+      SetHelpers: "json",         // partial: only the named show flags change
+      SetStartMode: "string",     // "guided" | "released"
+      SetRpm: "number",
+      SetAddOnMassGrams: "number",// on the hub; 120 g balance the top
+      SetTheta0Deg: "number",     // θ₀ of L⃗ (5–25°)
+      SetFriction: "number",      // factor × the bearing friction, 0 = none; no restart
+      SetTimeScale: "number",
+      SetPaused: "bool",
+      SetPushThetaDot: "number",  // Stoß strength, rad/s; no restart
+      SetPushPhiDot: "number",
+      Restart: "none",
+      Push: "none",
+    };
+    const queued = [];            // commands that arrive before Unity runs
+
+    function forward(cmd, value) {
+      const kind = COMMANDS[cmd];
+      if (kind === "none") {
+        window.unityInstance.SendMessage("WebBridge", cmd);
+      } else if (kind === "json") {
+        window.unityInstance.SendMessage("WebBridge", cmd, typeof value === "string" ? value : JSON.stringify(value));
+      } else if (kind === "string") {
+        window.unityInstance.SendMessage("WebBridge", cmd, String(value));
+      } else if (kind === "bool") {
+        window.unityInstance.SendMessage("WebBridge", cmd, value ? 1 : 0);
+      } else if (Number.isFinite(typeof value === "boolean" ? +value : value)) {
+        window.unityInstance.SendMessage("WebBridge", cmd, +value);
+      } else {
+        console.warn("precession-sim: " + cmd + " needs a number, got", value);
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      if (event.origin !== window.location.origin) return;           // only the module page on the same server
+      const data = event.data;
+      if (!data || data.source !== "precession-module" || data.type !== "command") return;
+      if (!Object.hasOwn(COMMANDS, data.cmd)) {
+        console.warn("precession-sim: unknown command", data.cmd);
+        return;
+      }
+      if (window.unityInstance) {
+        forward(data.cmd, data.value);
+      } else {
+        queued.push([data.cmd, data.value]);
+      }
+    });
+  </script>
+</body>
+</html>

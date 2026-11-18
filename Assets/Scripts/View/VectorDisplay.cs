@@ -21,6 +21,12 @@ public class VectorDisplay : MonoBehaviour {
     [SerializeField] private float scaleOmega = 4e-4f;                      // m per rad/s
     [SerializeField] private float scaleD = 2.5f;                           // m per N·m
 
+    [Header("Anchor")]
+    // m along the figure axis from the pivot where the arrows start; 0 = at the pivot (original, module). The lecture
+    // gyroscope draws them from the hub on top of its long rod, where they would otherwise run hidden inside it.
+    // Taken from the model (not from a transform), so it never lags the pose by a frame.
+    [SerializeField] private float anchorHeight = 0f;
+
     private IGyroscopeModelSource controller;
 
 
@@ -54,6 +60,7 @@ public class VectorDisplay : MonoBehaviour {
             return;
         }
         Vector3 pivot = transform.position;                                 // Gyroscope sits exactly at the pivot point
+        if (anchorHeight != 0f) pivot += anchorHeight * PhysicsToUnity.Vector(model.AxisDirection);
 
         // draw the three arrows according to their respective boolean
         DrawOrHide(arrowL, showL, scaleL * PhysicsToUnity.Vector(model.AngularMomentum), pivot);

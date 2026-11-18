@@ -190,4 +190,95 @@ public class GyroscopeModelTests {
         Assert.That(maxDeviation, Is.LessThan(1e-9));
         Assert.That(continued.PhiDot, Is.EqualTo(model.PhiDot / 2).Within(1e-3 * model.PhiDot));
     }
+
+
+    // ---- lecture gyroscope (LectureGyroscope.asset, estimates): figure axis along the rod to the disk, nearly upright.
+    // Bare it hangs (k < 0, heavy plate below the tip), with 300 g on the hub it is top-heavy (k > 0).
+    private const double LectureI3 = 0.0406;                // kg·m²
+    private const double LectureI1Bare = 0.208;             // kg·m²
+    private const double LectureI1Heavy = 0.377;            // kg·m², with 300 g on the hub
+    private const double Hanging = -0.883;                  // N·m
+    private const double TopHeavy = 1.324;                  // N·m
+    private const double LectureOmega3 = 300 * 2 * Math.PI / 60;    // rad/s, 300 rpm
+
+
+    [TestCase(Hanging, LectureI1Bare, TestName = "Energy conserved, hanging lecture top")]
+    [TestCase(TopHeavy, LectureI1Heavy, TestName = "Energy conserved, top-heavy lecture top")]
+    public void LectureTopEnergyIsConserved(double torqueConst, double i1) {
+        var model = GyroscopeModel.FromInertia(i1, LectureI3, torqueConst);
+        model.SetInitialConditions(Deg(15), 0, 0, LectureOmega3);
+        model.Push(0.3, 0);
+        double e0 = model.Energy;
+        double scale = 0.5 * LectureI3 * LectureOmega3 * LectureOmega3;
+
+        Run(model, 10, 1e-3);
+
+        Assert.That(Math.Abs(model.Energy - e0) / scale, Is.LessThan(1e-9));
+    }
+
+
+    // the hanging top precesses the other way round: same spin, opposite torque, opposite φ̇; for a fast top
+    // φ̇ → k/(I3 ω3) in both cases
+    [Test]
+    public void HangingTopPrecessesBackwards() {
+        const double fastOmega3 = 300;                      // rad/s, fast enough for the fast-top formula
+        var hanging = GyroscopeModel.FromInertia(LectureI1Bare, LectureI3, Hanging);
+        var topHeavy = GyroscopeModel.FromInertia(LectureI1Bare, LectureI3, -Hanging);
+
+        double backwards = hanging.SteadyPrecessionRate(Deg(15), fastOmega3);
+        double forwards = topHeavy.SteadyPrecessionRate(Deg(15), fastOmega3);
+
+        Assert.That(backwards, Is.LessThan(0));
+        Assert.That(forwards, Is.GreaterThan(0));
+        Assert.That(backwards, Is.EqualTo(Hanging / (LectureI3 * fastOmega3)).Within(1).Percent);
+        Assert.That(forwards, Is.EqualTo(-Hanging / (LectureI3 * fastOmega3)).Within(1).Percent);
+    }
+
+
+    [TestCase(5.0)]
+    [TestCase(25.0)]
+    public void GuidedHangingTopKeepsThetaConstant(double theta0Deg) {
+        var model = GyroscopeModel.FromInertia(LectureI1Bare, LectureI3, Hanging);
+        double theta0 = Deg(theta0Deg);
+        model.SetInitialConditions(theta0, 0, model.SteadyPrecessionRate(theta0, LectureOmega3), LectureOmega3);
+        double maxDeviation = 0;
+
+        Run(model, 10, 1e-3, t => maxDeviation = Math.Max(maxDeviation, Math.Abs(model.Theta - theta0)));
+
+        Assert.That(maxDeviation, Is.LessThan(1e-9));
+    }
+
+
+    // a hanging top has a steady precession at any spin (the discriminant a² − 4 b cosθ stays positive for b < 0),
+    // a top-heavy one only above I3² ω3² = 4 k I1 cosθ: at 15° about 330 rpm for 300 g
+    [Test]
+    public void TopHeavyLectureTopNeedsFastSpin() {
+        var hanging = GyroscopeModel.FromInertia(LectureI1Bare, LectureI3, Hanging);
+        var topHeavy = GyroscopeModel.FromInertia(LectureI1Heavy, LectureI3, TopHeavy);
+        double limit = Math.Sqrt(4 * TopHeavy * LectureI1Heavy * Math.Cos(Deg(15))) / LectureI3;   // rad/s
+
+        Assert.That(hanging.SteadyPrecessionRate(Deg(15), 1), Is.Not.NaN);
+        Assert.That(topHeavy.SteadyPrecessionRate(Deg(15), LectureOmega3), Is.NaN);         // 300 rpm: too slow
+        Assert.That(topHeavy.SteadyPrecessionRate(Deg(15), 0.99 * limit), Is.NaN);
+        Assert.That(topHeavy.SteadyPrecessionRate(Deg(15), 1.01 * limit), Is.Not.NaN);
+        Assert.That(limit * 60 / (2 * Math.PI), Is.EqualTo(327).Within(2).Percent);
+    }
+
+
+    // released at 300 rpm the top-heavy top swings far down (it would hit the stop at ~30°), the hanging one only
+    // nods and comes back up
+    [Test]
+    public void ReleasedSlowTopHeavyTopFallsFarHangingDoesNot() {
+        var topHeavy = GyroscopeModel.FromInertia(LectureI1Heavy, LectureI3, TopHeavy);
+        var hanging = GyroscopeModel.FromInertia(LectureI1Bare, LectureI3, Hanging);
+        topHeavy.SetInitialConditions(Deg(15), 0, 0, LectureOmega3);
+        hanging.SetInitialConditions(Deg(15), 0, 0, LectureOmega3);
+        double maxHeavy = 0, maxHanging = 0;
+
+        Run(topHeavy, 5, 1e-3, t => maxHeavy = Math.Max(maxHeavy, topHeavy.Theta));
+        Run(hanging, 5, 1e-3, t => maxHanging = Math.Max(maxHanging, hanging.Theta));
+
+        Assert.That(maxHeavy, Is.GreaterThan(Deg(30)));
+        Assert.That(maxHanging, Is.LessThanOrEqualTo(Deg(15) + 1e-9));
+    }
 }
