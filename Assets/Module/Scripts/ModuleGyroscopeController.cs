@@ -4,20 +4,18 @@ using UnityEngine.Serialization;
 
 
 // Runs the gyroscope in the module scene: the lab gyroscope or the simple top (one build, the page chooses), with
-// parameters in lab language, released or guided start, push, friction. The lecture scene (Assets/Lecture) uses it too,
-// with only its lecture rig: each scene sets the rigs it has, and an apparatus without a rig is ignored.
+// parameters in lab language, released or guided start, push, friction.
 // The setters only note a change, applied once in the next FixedUpdate, so a whole preset from the page (step 5) costs
 // one restart, not one per value. Apparatus and start mode restart; Drehzahl, Zusatzgewicht and Neigung continue the
 // running gyroscope from where it is (ContinueSimulation).
 public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
-    public enum Apparatus { Lab, SimpleTop, Lecture }                           // Versuchskreisel / einfacher Kreisel / Vorlesungskreisel
+    public enum Apparatus { Lab, SimpleTop }                                    // Versuchskreisel / einfacher Kreisel
     public enum StartMode { Released, Guided }                                  // losgelassen / geführt
 
     [Header("Apparatus")]
     [SerializeField] private Apparatus apparatus = Apparatus.Lab;
     [SerializeField] private ApparatusRig labRig;
     [SerializeField] private ApparatusRig topRig;
-    [SerializeField] private ApparatusRig lectureRig;                           // lecture scene only
 
     [Header("Experiment")]
     [SerializeField, Range(0f, 3000f)] private float rpm = 400f;                // Drehzahl of the wheel
@@ -36,9 +34,6 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     [Header("Display")]
     [SerializeField] private float maxVisibleSpinRps = 5f;                      // revolutions per REAL second
-    // trail points per physics step, computed from the integration (as in the original GyroscopeController): the pose
-    // changes at only 50 Hz, too coarse for fast nutation. 0 = off, the trail takes the pose once per frame (module).
-    [SerializeField, Range(0, 20)] private int trailSamplesPerStep = 0;
 
     [Header("Readout (written in Play mode)")]
     [SerializeField] private float omegaR;                                      // rad/s
@@ -54,23 +49,11 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     private bool pushPending;
     private double e0, spinEnergy0;
     private float displaySpinDeg;
-    private Vector3 trailTipLocal, lastTrailPoint;
 
-    private ApparatusRig Rig => RigFor(apparatus);
-
-    private ApparatusRig RigFor(Apparatus value) {
-        switch (value) {
-            case Apparatus.Lab: return labRig;
-            case Apparatus.SimpleTop: return topRig;
-            default: return lectureRig;
-        }
-    }
+    private ApparatusRig Rig => apparatus == Apparatus.Lab ? labRig : topRig;
 
     public GyroscopeModel Model => gyroscope;
     public bool SpinDisplayLimited { get; private set; }
-    // the top tipped as far as its stand allows (ApparatusRig.StopThetaDeg, lecture gyroscope): the physics stops
-    // until the next restart; a slider change after that restarts
-    public bool Fallen { get; private set; }
 
     public Apparatus SelectedApparatus => apparatus;                            // "Apparatus" is taken by the enum
     public ApparatusRig ActiveRig => Rig;
@@ -108,10 +91,6 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     // ---- called by the UI / bridge ----
 
     public void SetApparatus(Apparatus value) {
-        if (RigFor(value) == null) {
-            Debug.LogWarning($"ModuleGyroscopeController: no rig for {value} in this scene, ignored.");
-            return;
-        }
         apparatus = value;
         resetPending = true;
     }
@@ -167,9 +146,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     private void ResetSimulation() {
         ApparatusRig rig = Rig;
         ApparatusParameters p = rig.Parameters;
-        if (labRig != null) labRig.Show(rig == labRig);
-        if (topRig != null) topRig.Show(rig == topRig);
-        if (lectureRig != null) lectureRig.Show(rig == lectureRig);
+        labRig.Show(rig == labRig);
+        topRig.Show(rig == topRig);
         vectors.SetScales(rig.VectorScales.x, rig.VectorScales.y, rig.VectorScales.z);
 
         double addOnMass = addOnMassGrams / 1000.0;
@@ -192,18 +170,12 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
         e0 = gyroscope.Energy;
         spinEnergy0 = 0.5 * p.I3 * omega3*omega3;
         resetPending = changePending = tiltPending = false;
-        Fallen = false;
         SimTime = 0;
         Run++;
         Segment++;
 
         if (!Frozen) ApplyPose();
-        if (rig.Trail != null) {
-            rig.Trail.Clear();
-            // the trail sits on the body (not the spinning rotor): its place in this object's frame is fixed
-            trailTipLocal = transform.InverseTransformPoint(rig.Trail.transform.position);
-        }
-        lastTrailPoint = Vector3.positiveInfinity;                              // the next sample always counts
+        if (rig.Trail != null) rig.Trail.Clear();
     }
 
 
@@ -258,12 +230,12 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
 
     void FixedUpdate() {
-        if (resetPending || (changePending && Fallen)) {                        // a fallen top can't continue: start again
+        if (resetPending) {
             ResetSimulation();
         } else if (changePending) {
             ContinueSimulation();
         }
-        if (Frozen || Fallen) {
+        if (Frozen) {
             pushPending = false;                                                // a Stoß on a held apparatus is lost, not saved up
             return;
         }
@@ -272,15 +244,8 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
             pushPending = false;
         }
         double h = (double)Time.fixedDeltaTime / substeps;
-        int trailInterval = trailSamplesPerStep > 0 ? Mathf.Max(1, substeps / trailSamplesPerStep) : 0;
-        float stopDeg = Rig.StopThetaDeg;
         for (int i = 0; i < substeps; i++) {
             gyroscope.RK4Step(h);
-            if (trailInterval > 0 && (i + 1) % trailInterval == 0) AddTrailPoint();
-            if (stopDeg > 0 && Theta * 180 / Math.PI >= stopDeg) {              // a leg touches the stand: stop here
-                Fallen = true;
-                break;
-            }
         }
         SimTime += Time.fixedDeltaTime;
     }
@@ -289,14 +254,14 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
     void Update() {
         // paused (time scale 0): no FixedUpdate, but a new preset, Neustart or a new tilt should show at once
         if (Time.timeScale == 0f) {
-            if (resetPending || (changePending && Fallen)) {
+            if (resetPending) {
                 ResetSimulation();
             } else if (changePending) {
                 ContinueSimulation();
             }
         }
         if (!Frozen) {
-            if (!Fallen) UpdateDisplaySpin();                                   // a fallen top rests on its stand
+            UpdateDisplaySpin();
             ApplyPose();
         }
 
@@ -324,28 +289,13 @@ public class ModuleGyroscopeController : MonoBehaviour, IGyroscopeModelSource {
 
     // model angles (rad, right-handed) → Unity degrees (left-handed: sign flip); local up of this object = figure axis
     private void ApplyPose() {
+        float tiltDeg = PhysicsToUnity.Angle(gyroscope.Theta);
+        float phiDeg = PhysicsToUnity.Angle(gyroscope.Phi);
+
         Rig.Rotor.localRotation = Quaternion.AngleAxis(displaySpinDeg, Vector3.up);
-        transform.localRotation = ModelRotation();
-    }
 
-    private Quaternion ModelRotation() {
-        Quaternion tilt = Quaternion.AngleAxis(PhysicsToUnity.Angle(gyroscope.Theta), Vector3.right);
-        Quaternion precession = Quaternion.AngleAxis(PhysicsToUnity.Angle(gyroscope.Phi), Vector3.up);
-        return precession * tilt;
-    }
-
-
-    // trail point at the current model state, also between two poses (trailSamplesPerStep > 0); skips points closer
-    // than minVertexDistance. Emitting must stay on: with it off the trail disappeared without any error. The automatic
-    // point at the pose adds nothing, because the last sample of a physics step lies at the pose.
-    private void AddTrailPoint() {
-        TrailRenderer trail = Rig.Trail;
-        if (trail == null || !trail.enabled) return;
-        Vector3 point = transform.parent != null
-            ? transform.parent.TransformPoint(transform.localPosition + ModelRotation() * trailTipLocal)
-            : transform.localPosition + ModelRotation() * trailTipLocal;
-        if ((point - lastTrailPoint).sqrMagnitude < trail.minVertexDistance * trail.minVertexDistance) return;
-        trail.AddPosition(point);
-        lastTrailPoint = point;
+        Quaternion tilt = Quaternion.AngleAxis(tiltDeg, Vector3.right);
+        Quaternion precession = Quaternion.AngleAxis(phiDeg, Vector3.up);
+        transform.localRotation = precession * tilt;
     }
 }

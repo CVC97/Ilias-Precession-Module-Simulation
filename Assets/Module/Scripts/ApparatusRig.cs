@@ -3,8 +3,7 @@ using UnityEngine.Serialization;
 
 
 // One apparatus as seen in the scene: its parameters, the parts the controller moves, its stand, and the settings
-// that depend on its size. Sits on the rig root under the Gyroscope object (LabRig, TopRig; LectureRig in the lecture
-// scene).
+// that depend on its size. Sits on the rig root under the Gyroscope object (LabRig, TopRig).
 public class ApparatusRig : MonoBehaviour {
     [SerializeField] private ApparatusParameters parameters;
     [SerializeField] private Transform rotor;                                   // spins about its local up axis
@@ -20,8 +19,6 @@ public class ApparatusRig : MonoBehaviour {
     [FormerlySerializedAs("precessionConeLength")]                              // keeps the value saved under the old name
     [SerializeField] private float coneLength = 0.2f;                           // m, apex to rim of the precession cone: pivot to
                                                                                 // the axle end on the side L⃗ points to
-    // deg; θ of L⃗ at which the apparatus hits its stand and stops (Fallen); 0 = no stop (lab, simple top)
-    [SerializeField] private float stopThetaDeg = 0f;
 
     public ApparatusParameters Parameters => parameters;
     public Transform Rotor => rotor;
@@ -33,7 +30,6 @@ public class ApparatusRig : MonoBehaviour {
     public float PrecessionArcHeight => precessionArcHeight;
     public float PrecessionScale => precessionScale;
     public float ConeLength => coneLength;
-    public float StopThetaDeg => stopThetaDeg;
 
 
     public void Show(bool visible) {

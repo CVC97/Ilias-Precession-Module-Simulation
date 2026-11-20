@@ -50,14 +50,13 @@ public class ModuleHelpers : MonoBehaviour {
         vectors.ShowL = show.L;
         vectors.ShowOmega = show.omega;
         vectors.ShowD = show.D;
-        // the lecture scene leaves out what it doesn't need
-        if (labels != null) labels.SetActive(show.labels);
-        if (figureAxis != null) figureAxis.SetActive(show.figureAxis);
-        if (verticalAxis != null) verticalAxis.SetActive(show.verticalAxis);
-        if (precessionArc != null) precessionArc.SetActive(show.precessionArc);
+        labels.SetActive(show.labels);
+        figureAxis.SetActive(show.figureAxis);
+        verticalAxis.SetActive(show.verticalAxis);
+        precessionArc.SetActive(show.precessionArc);
         if (precessionVector != null) precessionVector.SetActive(show.precessionVector);
 
-        bool forceFree = controller.Model != null && controller.Model.TorqueConst == 0;    // balanced lab or lecture gyroscope
+        bool forceFree = controller.Model != null && controller.Model.TorqueConst == 0;    // balanced lab gyroscope
         if (precessionCone != null) precessionCone.SetActive(show.precessionCone && !forceFree);
         if (nutationCone != null) nutationCone.SetActive(show.nutationCone && forceFree);
         if (spaceCone != null) spaceCone.SetActive(show.spaceCone && forceFree);
